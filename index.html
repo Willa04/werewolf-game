@@ -30,7 +30,7 @@
   .star{position:absolute;background:#fff;border-radius:50%;animation:twinkle var(--dur) ease-in-out infinite;animation-delay:var(--delay)}
   @keyframes twinkle{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.8)}}
 
-  .container{position:relative;z-index:1;width:100%;max-width:520px;margin:0 auto;padding:12px 16px 24px;display:flex;flex-direction:column;min-height:100vh}
+  .container{position:relative;z-index:1;width:100%;max-width:520px;margin:0 auto;padding:12px 16px 16px;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
   /* 顶部栏 */
   .top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--card-bg);border-radius:14px;border:1px solid var(--card-border);backdrop-filter:blur(8px);margin-bottom:10px;flex-shrink:0}
@@ -41,8 +41,8 @@
   .round-badge{background:rgba(255,255,255,.06);padding:4px 12px;border-radius:20px;font-size:.78rem;color:var(--muted)}
 
   /* 玩家卡片 */
-  .players-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;flex-shrink:0}
-  .player-card{position:relative;background:var(--card-bg);border:1.5px solid var(--card-border);border-radius:12px;padding:10px 6px;text-align:center;cursor:default;transition:all .4s;backdrop-filter:blur(4px);user-select:none}
+  .players-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:8px;flex-shrink:0}
+  .player-card{position:relative;background:var(--card-bg);border:1.5px solid var(--card-border);border-radius:10px;padding:6px 4px;text-align:center;cursor:default;transition:all .4s;backdrop-filter:blur(4px);user-select:none}
   .player-card.selectable{cursor:pointer;border-color:rgba(255,255,255,.18)}
   .player-card.selectable:hover{border-color:var(--accent);background:rgba(233,69,96,.12);transform:translateY(-3px);box-shadow:0 8px 24px rgba(233,69,96,.2)}
   .player-card.selectable:active{transform:scale(.95)}
@@ -51,16 +51,16 @@
   .player-card.dead{opacity:.45;filter:grayscale(.7);border-color:transparent}
   .player-card.dead .card-avatar{filter:grayscale(1)}
   .player-card.human{border-color:rgba(240,192,64,.4)}
-  .card-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);font-weight:800;font-size:.8rem;margin-bottom:4px}
+  .card-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.08);font-weight:800;font-size:.72rem;margin-bottom:2px}
   .player-card.human .card-num{background:var(--gold);color:#1a1a2e}
   .player-card.dead .card-num{background:#333;color:#666}
-  .card-avatar{font-size:1.8rem;margin:2px 0;transition:all .4s}
-  .card-label{font-size:.7rem;color:var(--muted)}
+  .card-avatar{font-size:1.5rem;margin:1px 0;transition:all .4s}
+  .card-label{font-size:.65rem;color:var(--muted)}
   .card-badge{position:absolute;top:-4px;right:-4px;font-size:.62rem;background:var(--accent);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700}
   .card-badge.you{background:var(--gold);color:#1a1a2e}
 
   /* 日志区 */
-  .log-area{flex:1;background:rgba(0,0,0,.35);border-radius:14px;padding:14px;margin-bottom:10px;overflow-y:auto;max-height:45vh;min-height:180px;border:1px solid var(--card-border);font-size:.85rem;line-height:1.8;scroll-behavior:smooth}
+  .log-area{flex:1;background:rgba(0,0,0,.35);border-radius:14px;padding:14px;margin-bottom:10px;overflow-y:auto;border:1px solid var(--card-border);font-size:.85rem;line-height:1.8;scroll-behavior:smooth;min-height:0}
   .log-area::-webkit-scrollbar{width:3px}.log-area::-webkit-scrollbar-track{background:transparent}.log-area::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
   .log-line{margin-bottom:3px;animation:logIn .4s ease;padding:2px 0}
   @keyframes logIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
