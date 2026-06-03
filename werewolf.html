@@ -457,7 +457,7 @@ function submitText(){
 }
 
 // ============ 游戏引擎 ============
-function startGame(){
+async function startGame(){
   // 停止上一局残留的语音
   stopMic();
   skipSpeech(); // 停止 AI 语音播报
@@ -738,15 +738,15 @@ async function startRound(){
   await sleep(600);
 
   // === 检查胜负 ===
-  if(checkWin()) return;
+  if(await checkWin()) return;
 
   // === 进入白天发言 ===
   await dayDiscussion();
-  if(checkWin()) return;
+  if(await checkWin()) return;
 
   // === 投票 ===
   await votingPhase();
-  if(checkWin()) return;
+  if(await checkWin()) return;
 
   // === 下一轮 ===
   await godSay('——————————————');
@@ -898,27 +898,27 @@ async function votingPhase(){
 }
 
 // ============ 胜负判定 ============
-function checkWin(){
+async function checkWin(){
   const wolves = aliveWolves();
   const gods = aliveGods();
   const vills = aliveVills();
 
   // 狼人胜利条件：神职全灭 或 平民全灭
   if(gods.length === 0 || vills.length === 0){
-    gameOver('wolf');
+    await gameOver('wolf');
     return true;
   }
 
   // 好人胜利条件：狼人全灭
   if(wolves.length === 0){
-    gameOver('good');
+    await gameOver('good');
     return true;
   }
 
   return false;
 }
 
-function gameOver(winner){
+async function gameOver(winner){
   G.phase = 'gameover';
   updateStatus('gameover', G.round);
 
