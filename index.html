@@ -245,7 +245,7 @@ function updateApiStatus(){
 
 // ============ 全局状态 ============
 let G = {
-  started: false, round: 0, phase: 'init',
+  started: false, round: 0, phase: 'init', aborted: false,
   players: [], humanIdx: -1,
   nightTargets: { wolf:null, seer:null, guard:null },
   witchAntidote: true, witchPoison: true,
@@ -434,7 +434,7 @@ async function startGame(){
   const roles = shuffle(POOL);
   const humanIdx = Math.floor(Math.random() * N);
   G = {
-    started: true, round: 0, phase: 'init',
+    started: true, round: 0, phase: 'init', aborted: false,
     players: roles.map((rk, i)=>({
       id: i+1, roleKey: rk, alive: true, isHuman: i===humanIdx,
       personality: ['激进','保守','分析','跟风','谨慎'][Math.floor(Math.random()*5)],
@@ -466,9 +466,11 @@ async function startGame(){
 }
 
 function endGame(){
+  // 设置终止标志，所有异步循环检测到此标志后立即退出
+  G.aborted = true;
   stopMic(); skipSpeech();
   clearCardsSelectable(); unhighlightAll();
-  // 如果有挂起的等待，先取消
+  // 取消任何挂起的用户输入等待
   if(G.resolve){ G.resolve('cancelled'); G.resolve = null; }
   G.started = false; G.phase = 'init'; G.resolve = null;
   $('btnEnd').style.display = 'none';
@@ -478,10 +480,10 @@ function endGame(){
   clearLog();
   updatePlayerGrid();
   updateStatus('init', 0);
-  systemSay('游戏已结束，点击下方按钮重新开始');
-  // 直接用 onclick 写死在 HTML 上最简单
-  $('actionButtons').innerHTML = '<button class="btn btn-start" onclick="startGame()">🎮 开始游戏</button>';
+  systemSay('游戏已结束，点击下方重新开始');
   $('actionPrompt').textContent = '🎮 准备好了吗？';
+  $('actionButtons').innerHTML = '<button class="btn btn-start" onclick="startGame()">🎮 开始游戏</button>';
+  hideSpeechInput();
 }
 
 function updateDebug(){
@@ -494,6 +496,7 @@ function updateDebug(){
 
 // ============ 回合流程 ============
 async function startRound(){
+  if(G.aborted) return;
   G.round++; G.nightTargets={wolf:null,seer:null,guard:null};
   G.witchSaved=null; G.witchPoisoned=null; G.nightKill=null;
   G.actualDeath=null; G.speechesThisRound=0; G.roundSpeeches=[]; G.voteResults={};
@@ -625,21 +628,23 @@ async function startRound(){
     }
   }
   updatePlayerGrid(); updateDebug(); await sleep(600);
-  if(await checkWin()) return;
+  if(G.aborted || await checkWin()) return;
   await dayDiscussion();
-  if(await checkWin()) return;
+  if(G.aborted || await checkWin()) return;
   await votingPhase();
-  if(await checkWin()) return;
+  if(G.aborted || await checkWin()) return;
   await godSay('——————————————'); await sleep(500);
-  startRound();
+  if(!G.aborted) startRound();
 }
 
 // ============ 白天讨论 ============
 async function dayDiscussion(){
+  if(G.aborted) return;
   G.phase='day'; updateStatus('day', G.round);
   await godSay('进入自由发言阶段，按编号顺序发言 🗣');
   const speakers = alivePlayers().sort((a,b)=>a.id-b.id);
   for(const p of speakers){
+    if(G.aborted) return;
     if(!p.alive) continue;
     if(p.isHuman && isHumanAlive()){
       highlightSpeaker(p.id);
@@ -675,6 +680,7 @@ async function dayDiscussion(){
 
 // ============ 投票 ============
 async function votingPhase(){
+  if(G.aborted) return;
   G.phase='vote'; updateStatus('vote', G.round);
   await godSay('现在开始投票放逐，请选择你要放逐的玩家 🗳');
   const voters = alivePlayers(); const candidates = alivePlayers();
