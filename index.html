@@ -831,9 +831,9 @@ function buildPromptForPlayer(player){
     G.roundSpeeches.forEach(s=>{ prevSpeeches+=`${s.playerId}号："${s.text}"\n`; });
   } else { prevSpeeches='（本轮第一个发言）'; }
 
-  return `你是${player.id}号玩家。9人狼人杀（3狼1预言1女巫1猎人3平民）。
+  return `你是${player.id}号玩家。9人狼人杀（3狼1预言1女巫1猎人3平民，没有守卫）。
 
-【游戏规则】只有以下环节：天黑→狼人选刀→预言家查验→女巫用药→天亮→轮流发言→投票放逐→天黑循环。没有警长、没有警徽、没有上警环节、没有警上竞选。
+【游戏规则】9人局，角色固定：预言家×1、女巫×1、猎人×1、狼人×3、平民×3。没有守卫！没有警长！平安夜的唯一原因是女巫用了解药，不存在"守了人"。环节：天黑→狼人选刀→预言家查验→女巫用药→天亮→轮流发言→投票放逐→天黑循环。
 
 【真实身份】${role.emoji} ${role.name}
 ${wolfInfo}${seerInfo}
@@ -864,7 +864,8 @@ async function callDeepSeek(prompt){
         .replace(/^["'""]/,'').replace(/["'""]$/,'')
         .replace(/^（.+?）\s*/,'')
         .replace(/^\d+号[说：:]\s*/,'')
-        .replace(/警上|警下|警长|警徽|上警|竞选警长|警徽流/g,'');
+        .replace(/警上|警下|警长|警徽|上警|竞选警长|警徽流/g,'')
+        .replace(/守卫|守了人|守中人|空守/g,'');
       if(text.length < 5) return null;
       return text;
     }
