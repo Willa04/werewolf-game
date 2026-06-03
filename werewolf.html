@@ -362,9 +362,18 @@ function stage(msg, cls='system'){
   el.appendChild(div);
   el.scrollTop = el.scrollHeight;
 }
+/** 去除文本中的 emoji 和装饰符号，让 TTS 只读文字 */
+function stripEmoji(text){
+  return text.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2500}-\u{25FF}]|[\u{FE00}-\u{FEFF}]|[\u{200D}]|[\u{20D0}-\u{20FF}]/gu, '')
+    .replace(/[★☆✿❀⚡✨🌟💫⭐🌙☀️☠️💀🔮🧪🏹🐺👤🗣🗳⏭🏁🎮🔄🎤⏹🔊🔇✅❌❓❗💬💚☠]/g, '')
+    .replace(/[🎭🎉💀☀️🌙⭐✨🏹🔮🧪🐺👤🗣🗳⏭🏁🎮🔄🎤⏹🔊🔇✅❌💬💚☠☀]/g, '')
+    .replace(/[⬛⬜🟥🟩🟨🟦]/g, '')
+    .trim();
+}
+
 async function godSay(msg){
   stage('📯 '+msg, 'god');
-  await speakText(msg);
+  await speakText(stripEmoji(msg));
 }
 function playerSay(num, msg){ stage('', 'player-speech'); const last=$('stage').lastChild; last.innerHTML='<span class="speaker">'+num+'号：</span>'+msg; }
 function systemSay(msg){ stage(msg, 'system'); }
@@ -562,13 +571,19 @@ async function startRound(){
     })));
     const chosen = await waitForClick(targets.map(p=>'wolfTarget_'+p.id));
     wolfTarget = parseInt(chosen.replace('wolfTarget_',''));
+    systemSay(`🐺 狼人已选定猎杀 ${wolfTarget} 号`);
   } else {
     // AI 狼人选目标
     wolfTarget = aiWolfTarget();
+    // 如果人类是狼人，告知同伴的决定
+    if(humanPlayer().roleKey === 'WOLF' && isHumanAlive()){
+      systemSay(`🐺 狼同伴决定猎杀 ${wolfTarget} 号`);
+    } else {
+      systemSay('🐺 狼人已选定目标...');
+    }
   }
   G.nightTargets.wolf = wolfTarget;
   G.nightKill = wolfTarget;
-  systemSay('🐺 狼人已选定目标...');
   await sleep(400);
 
   // === 预言家行动 ===
@@ -795,7 +810,8 @@ async function dayDiscussion(){
       $('speechBar').classList.add('hidden');
 
       // 同时开始播报 + 等待跳过
-      const spoke = speakText(aiSpeech);
+      const voiceOpts = VOICE_PROFILES[p.personality] || {};
+      const spoke = speakText(aiSpeech, voiceOpts);
       const skipped = waitForClick(['btnSkipSpeech']);
       await Promise.race([spoke, skipped]);
       skipSpeech(); // 确保语音停止
@@ -867,7 +883,7 @@ async function votingPhase(){
     G.players[id-1].alive = false;
     const role = R[G.players[id-1].roleKey];
     stage(`🗳 ${id}号被投票放逐`, 'death');
-    await godSay(`${id}号玩家被放逐出局！身份是：${role.emoji} ${role.name}`);
+    await godSay(`${id}号玩家被放逐出局，请留遗言`);
 
     // 猎人被投票出局
     if(G.players[id-1].roleKey === 'HUNTER'){
@@ -1126,7 +1142,16 @@ if(typeof speechSynthesis !== 'undefined'){
 }
 
 /** TTS 播报文本，返回 Promise，播完或跳过时 resolve */
-function speakText(text){
+/** 不同性格的AI语音配置 */
+const VOICE_PROFILES = {
+  '激进':   { rate: 1.15, pitch: 1.2,  volume: 1.0 },  // 快、音调高、激动
+  '分析':   { rate: 0.95, pitch: 1.0,  volume: 1.0 },  // 中等、沉稳
+  '保守':   { rate: 0.85, pitch: 0.9,  volume: 0.85 }, // 慢、低声、谨慎
+  '跟风':   { rate: 1.0,  pitch: 1.05, volume: 0.9 },  // 普通
+  '谨慎':   { rate: 0.9,  pitch: 0.95, volume: 0.9 },  // 稍慢、低沉
+};
+
+function speakText(text, options = {}){
   return new Promise(resolve => {
     if(muteAI || !text || typeof speechSynthesis === 'undefined'){
       resolve(); return;
@@ -1137,9 +1162,9 @@ function speakText(text){
 
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'zh-CN';
-    utter.rate = 1.05;  // 稍快一点
-    utter.pitch = 1.0;
-    utter.volume = 1.0;
+    utter.rate = options.rate || 1.05;
+    utter.pitch = options.pitch || 1.0;
+    utter.volume = options.volume || 1.0;
 
     if(chineseVoice){
       utter.voice = chineseVoice;
