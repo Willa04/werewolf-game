@@ -9,16 +9,16 @@
     --bg-night: #070b19; --bg-day: #0f1528;
     --card-bg: rgba(20,24,52,0.85); --card-border: rgba(255,255,255,0.08);
     --accent: #e94560; --gold: #f0c040; --gold-dim: #8a7030;
-    --text: #e0e0e8; --muted: #6a6a8a;
+    --text: #f0f0f6; --muted: #8888aa;
     --good: #4ecca3; --wolf: #e94560;
-    --log-system: #8899bb; --log-god: #f0c040; --log-death: #e94560; --log-speech: #e0d8c0;
+    --log-system: #aabbdd; --log-god: #f0c040; --log-death: #e94560; --log-speech: #f0ead0;
     --glow-gold: 0 0 20px rgba(240,192,64,0.3);
     --glow-red: 0 0 20px rgba(233,69,96,0.3);
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{
     font-family:'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif;
-    background:#0e1628;color:var(--text);
+    background:#1a2235;color:var(--text);
     min-height:100vh;overflow-x:hidden;
     transition:background 1.5s ease;
   }
@@ -49,7 +49,7 @@
   @keyframes spkPulse{0%,100%{box-shadow:0 0 4px rgba(240,192,64,.2)}50%{box-shadow:0 0 12px rgba(240,192,64,.5)}}
   .player-card.dead{opacity:.4;filter:grayscale(.7);border-color:transparent}
   .player-card.human{border-color:rgba(240,192,64,.4)}
-  .card-num{display:inline-block;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.08);font-weight:800;font-size:.65rem;line-height:18px;margin-bottom:1px}
+  .card-num{display:inline-block;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.14);font-weight:800;font-size:.65rem;line-height:18px;margin-bottom:1px}
   .player-card.human .card-num{background:var(--gold);color:#1a1a2e}
   .player-card.dead .card-num{background:#333;color:#666}
   .card-avatar{font-size:1.2rem;line-height:1.2;transition:all .3s}
@@ -58,7 +58,7 @@
   .card-badge.you{background:var(--gold);color:#1a1a2e}
 
   /* 日志区 */
-  .log-area{flex:1;background:rgba(0,0,0,.35);border-radius:8px;padding:8px 10px;margin-bottom:6px;overflow-y:auto;border:1px solid var(--card-border);font-size:.8rem;line-height:1.6;scroll-behavior:smooth;min-height:0}
+  .log-area{flex:1;background:rgba(0,0,0,.2);border-radius:8px;padding:8px 10px;margin-bottom:6px;overflow-y:auto;border:1px solid var(--card-border);font-size:.8rem;line-height:1.6;scroll-behavior:smooth;min-height:0}
   .log-area::-webkit-scrollbar{width:3px}.log-area::-webkit-scrollbar-track{background:transparent}.log-area::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
   .log-line{margin-bottom:3px;animation:logIn .4s ease;padding:2px 0}
   @keyframes logIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -105,11 +105,8 @@
   .btn-mute:hover{background:rgba(255,255,255,.08)}
   .btn-mute.muted{color:var(--muted);border-color:#444}
   .night-veil{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;transition:all 1.5s ease;background:transparent}
-  .night-veil.active{background:radial-gradient(ellipse at 50% 90%,rgba(20,30,70,.35) 0%,rgba(8,12,30,.2) 100%)}
+  .night-veil.active{background:radial-gradient(ellipse at 50% 90%,rgba(25,35,70,.18) 0%,rgba(10,15,30,.08) 100%)}
   .day-glow{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;transition:opacity 1.5s;opacity:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,190,80,.15) 0%,rgba(200,140,40,.06) 40%,transparent 65%)}
-  body.day-mode .day-glow{opacity:1}
-  .night-veil.active{background:radial-gradient(ellipse at 50% 80%,rgba(15,25,60,.5) 0%,rgba(3,5,20,.7) 100%)}
-  .day-glow{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;transition:opacity 1.5s;opacity:0;background:radial-gradient(ellipse at 50% 20%,rgba(255,180,60,.1) 0%,rgba(255,120,30,.04) 50%,transparent 70%)}
   body.day-mode .day-glow{opacity:1}
 
   .lock-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#050816;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
