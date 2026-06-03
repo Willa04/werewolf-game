@@ -250,7 +250,6 @@ let G = {
   nightKill: null, actualDeath: null,
   discussionLog: [], speechesThisRound: 0, voteResults: {},
   seerChecks: [], roundSpeeches: [],
-  sheriff: null, // 警长id
   resolve: null, currentSpeaker: null,
 };
 
@@ -339,15 +338,11 @@ function updatePlayerGrid(){
     if(!p.alive) cls += ' dead';
     if(p.isHuman) cls += ' human';
     let badge = '';
-    let sheriffBadge = '';
     if(!p.alive) badge = '<span class="card-badge">💀</span>';
-    else {
-      if(p.isHuman) badge = '<span class="card-badge you">你</span>';
-      if(G.sheriff === p.id) sheriffBadge = '<span class="card-badge" style="background:#f0c040;color:#1a1a2e;">🎖</span>';
-    }
+    else if(p.isHuman) badge = '<span class="card-badge you">你</span>';
     const avatar = p.alive ? (p.isHuman ? '😎' : '🙂') : '💀';
     return `<div class="${cls}" data-id="${p.id}">
-      ${badge}${sheriffBadge}
+      ${badge}
       <div class="card-num">${p.id}</div>
       <div class="card-avatar">${avatar}</div>
       <div class="card-label">${p.alive?'存活':'出局'}</div>
@@ -449,7 +444,7 @@ async function startGame(){
     witchSaved: null, witchPoisoned: null, lastGuardTarget: null,
     nightKill: null, actualDeath: null,
     discussionLog: [], speechesThisRound: 0, voteResults: {},
-    seerChecks: [], roundSpeeches: [], sheriff: null, resolve: null, currentSpeaker: null,
+    seerChecks: [], roundSpeeches: [], resolve: null, currentSpeaker: null,
   };
   clearLog(); updatePlayerGrid(); updateStatus('init',0);
   $('apiRow').classList.add('hidden'); // 游戏开始后隐藏API栏
@@ -466,106 +461,7 @@ async function startGame(){
     $('actionPrompt').textContent += ` | 🐺 狼同伴：${mates}`;
   }
   updateDebug();
-  $('btnStartGame').onclick = () => sheriffElection();
-}
-
-// ============ 上警选警长 ============
-async function sheriffElection(){
-  clearLog();
-  updateStatus('day', 0);
-  document.body.classList.add('day-mode');
-  G.phase = 'sheriff';
-
-  await godSay('进入上警环节，竞选警长 🎖');
-  await godSay('想竞选警长的玩家请举手...');
-  await sleep(600);
-
-  // 随机3-5个玩家参选（包括人类玩家有50%概率被选为参选）
-  const candidates = [];
-  const alive = alivePlayers();
-  const n = 3 + Math.floor(Math.random()*3); // 3-5人
-  const shuffled = shuffle(alive);
-  for(let i=0; i<Math.min(n, alive.length); i++){
-    candidates.push(shuffled[i]);
-  }
-  // 确保人类玩家一定有机会参选
-  const human = humanPlayer();
-  if(!candidates.find(c=>c.id===human.id)){
-    candidates[0] = human;
-  }
-
-  const ids = candidates.map(c=>c.id+'号').join('、');
-  systemSay(`参选警长的玩家：${ids}`);
-  await sleep(400);
-
-  // 每个候选人发言
-  for(const c of candidates){
-    highlightSpeaker(c.id);
-    if(c.isHuman){
-      setActions(`🎖 你是警长候选人，请发表竞选宣言`, []);
-      showSpeechInput();
-      $('actionPrompt').textContent = `🎖 请发表你的竞选宣言（${c.id}号）`;
-      const speech = await waitForText();
-      if(G.aborted) return;
-      const t = speech || '我会带领好人走向胜利！请投票给我。';
-      playerSay(c.id, t+'（竞选警长）');
-      hideSpeechInput();
-    } else {
-      setActions(`💬 ${c.id}号发表竞选宣言...`, []);
-      await sleep(400+Math.random()*400);
-      const speeches = [
-        '我是好人，我会认真听取每个人的发言，带领大家找出狼人。请投我一票！',
-        '我有很强的逻辑分析能力，一定能帮好人阵营获胜。选我当警长不会错。',
-        '我虽然不是什么神职，但我会公正地组织发言，确保每个人都说出自己的观点。',
-        '昨晚我想了很久，我觉得我适合当警长。我会保护好人，追击狼人！',
-      ];
-      const s = speeches[Math.floor(Math.random()*speeches.length)];
-      playerSay(c.id, s+'（竞选警长）');
-      if(!muteAI) speakText(s);
-    }
-  }
-
-  unhighlightAll();
-  await sleep(400);
-  await godSay('现在投票选出警长 🗳');
-
-  // 投票
-  const votes = {};
-  candidates.forEach(c=>{ votes[c.id]=0; });
-  for(const voter of alive){
-    if(voter.isHuman){
-      setActions('🎖 请投票选出警长', candidates.map(c=>({
-        id:'sheriffVote_'+c.id, label:c.id+'号', cls:'btn-action'
-      })));
-      const chosen = await waitForClick(candidates.map(c=>'sheriffVote_'+c.id));
-      if(G.aborted) return;
-      const target = parseInt(chosen.replace('sheriffVote_',''));
-      votes[target]++;
-      systemSay(`你投票给了 ${target} 号`);
-    } else {
-      // AI 投票：随机但有偏好（偏好发言积极的）
-      const t = candidates[Math.floor(Math.random()*candidates.length)];
-      votes[t.id]++;
-    }
-  }
-
-  // 公布结果
-  let maxV=0, winner=null;
-  Object.entries(votes).forEach(([id,count])=>{
-    systemSay(`  ${id}号：${count} 票`);
-    if(count>maxV){ maxV=count; winner=parseInt(id); }
-  });
-
-  G.sheriff = winner;
-  await godSay(`${winner}号玩家当选警长！🎖`);
-  systemSay(`警长拥有1.5票投票权`);
-
-  // 更新卡片显示警长标记
-  updatePlayerGrid();
-  await sleep(600);
-  updateStatus('night', 1);
-  document.body.classList.remove('day-mode');
-  startRound();
+  $('btnStartGame').onclick = () => startRound();
 }
 
 function endGame(){
@@ -705,7 +601,6 @@ async function startRound(){
   G.actualDeath=deaths;
   deaths.forEach(d=>{
     G.players[d.id-1].alive=false;
-    passSheriff(d.id);
   });
   updatePlayerGrid();
 
@@ -795,9 +690,8 @@ async function votingPhase(){
   const voters = alivePlayers(); const candidates = alivePlayers();
   candidates.forEach(c=>{ G.voteResults[c.id]=0; });
   for(const voter of voters){
-    const weight = (voter.id === G.sheriff) ? 2 : 1; // 警长1.5票→计为2票
     if(voter.isHuman && isHumanAlive()){
-      setActions(`🗳 请投票选择要放逐的玩家${weight>1?'（你是警长，有2票）':''}`, candidates.map(c=>({
+      setActions(`🗳 请投票选择要放逐的玩家`, candidates.map(c=>({
         id:'vote_'+c.id, label:c.id+'号', cls:'btn-danger'
       })));
       setCardsSelectable(candidates.map(c=>c.id), id=>{ const btn=$('vote_'+id); if(btn)btn.click(); });
@@ -805,11 +699,10 @@ async function votingPhase(){
       if(G.aborted) return;
       clearCardsSelectable();
       const target = parseInt(chosen.replace('vote_',''));
-      G.voteResults[target] += weight;
-      systemSay(`你投票给了 ${target} 号${weight>1?'（警长2票）':''}`);
+      G.voteResults[target]++; systemSay(`你投票给了 ${target} 号`);
     } else {
       const target = aiVote(voter);
-      if(target) G.voteResults[target] += weight;
+      if(target) G.voteResults[target]++;
     }
   }
   await godSay('投票结果：');
@@ -824,9 +717,9 @@ async function votingPhase(){
   if(eliminated.length===0){ systemSay('无人被放逐'); }
   else if(eliminated.length>1){
     systemSay(`平票！${eliminated.join('号、')}号均被放逐`);
-    eliminated.forEach(id=>{ G.players[id-1].alive=false; passSheriff(id); deathSay(`🗳 ${id}号被投票放逐（平票）`); });
+    eliminated.forEach(id=>{ G.players[id-1].alive=false; deathSay(`🗳 ${id}号被投票放逐（平票）`); });
   } else {
-    const id=eliminated[0]; G.players[id-1].alive=false; passSheriff(id);
+    const id=eliminated[0]; G.players[id-1].alive=false;
     deathSay(`🗳 ${id}号被投票放逐`);
     await godSay(`${id}号玩家被放逐出局，请留遗言`);
     if(G.players[id-1].roleKey==='HUNTER'){
@@ -846,16 +739,6 @@ async function votingPhase(){
 }
 
 // ============ 胜负判定 ============
-function passSheriff(deadId){
-  if(deadId === G.sheriff){
-    const aliveGood = alivePlayers().filter(p=>R[p.roleKey].camp==='good');
-    if(aliveGood.length>0){
-      G.sheriff = aliveGood[Math.floor(Math.random()*aliveGood.length)].id;
-      systemSay(`🎖 警长死亡，${G.sheriff}号继任警长`);
-    } else { G.sheriff = null; }
-  }
-}
-
 async function checkWin(){
   const wolves=aliveWolves(), gods=aliveGods(), vills=aliveVills();
   if(gods.length===0||vills.length===0){ await gameOver('wolf'); return true; }
