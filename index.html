@@ -268,6 +268,7 @@ const isHumanAlive = () => G.humanIdx >= 0 && G.players[G.humanIdx] && G.players
 function $(id){ return document.getElementById(id); }
 
 function logLine(msg, cls='system'){
+  if(G.aborted) return;
   const el = $('logArea');
   const div = document.createElement('div');
   div.className = 'log-line ' + cls;
@@ -282,11 +283,13 @@ function stripEmoji(text){
 }
 
 async function godSay(msg){
+  if(G.aborted) return;
   logLine('📯 '+msg, 'god');
   await speakText(stripEmoji(msg));
 }
 
 function playerSay(num, msg){
+  if(G.aborted) return;
   logLine('', 'speech');
   const last=$('logArea').lastChild;
   last.innerHTML='<span class="spkr">'+num+'号：</span>'+msg;
@@ -378,6 +381,7 @@ function updateStatus(phase, round){
 }
 
 function setActions(prompt, buttons){
+  if(G.aborted) return;
   $('actionPrompt').textContent = prompt;
   $('actionButtons').innerHTML = buttons.map(b=>
     `<button class="btn ${b.cls||'btn-action'}" id="${b.id||''}" ${b.disabled?'disabled':''}>${b.label}</button>`
@@ -403,6 +407,7 @@ function clearLog(){ $('logArea').innerHTML = ''; }
 // ============ 异步等待人类操作 ============
 function waitForClick(btnIds){
   return new Promise(resolve => {
+    if(G.aborted){ resolve('cancelled'); return; }
     G.resolve = resolve;
     btnIds.forEach(id => {
       const btn = $(id);
@@ -413,6 +418,7 @@ function waitForClick(btnIds){
 
 function waitForText(){
   return new Promise(resolve => {
+    if(G.aborted){ resolve('cancelled'); return; }
     G.resolve = resolve;
     showSpeechInput();
   });
@@ -922,7 +928,7 @@ const VOICE_PROFILES={
 
 function speakText(text, options={}){
   return new Promise(resolve=>{
-    if(muteAI||!text||typeof speechSynthesis==='undefined'){ resolve(); return; }
+    if(G.aborted||muteAI||!text||typeof speechSynthesis==='undefined'){ resolve(); return; }
     speechSynthesis.cancel();
     const utter=new SpeechSynthesisUtterance(text);
     utter.lang='zh-CN'; utter.rate=options.rate||1.05; utter.pitch=options.pitch||1.0; utter.volume=options.volume||1.0;
