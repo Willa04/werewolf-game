@@ -403,7 +403,6 @@ function clearLog(){ $('logArea').innerHTML = ''; }
 // ============ 异步等待人类操作 ============
 function waitForClick(btnIds){
   return new Promise(resolve => {
-    if(G.aborted){ resolve('aborted'); return; }
     G.resolve = resolve;
     btnIds.forEach(id => {
       const btn = $(id);
@@ -414,7 +413,6 @@ function waitForClick(btnIds){
 
 function waitForText(){
   return new Promise(resolve => {
-    if(G.aborted){ resolve('aborted'); return; }
     G.resolve = resolve;
     showSpeechInput();
   });
@@ -461,7 +459,7 @@ async function startGame(){
     $('actionPrompt').textContent += ` | 🐺 狼同伴：${mates}`;
   }
   updateDebug();
-  $('btnStartGame').onclick = () => startRound();
+  waitForClick(['btnStartGame']).then(() => startRound());
 }
 
 function endGame(){
@@ -599,9 +597,7 @@ async function startRound(){
   if(G.nightKill && G.witchSaved!==G.nightKill) deaths.push({id:G.nightKill, cause:'被狼人杀害'});
   if(G.witchPoisoned!==null) deaths.push({id:G.witchPoisoned, cause:'中毒身亡'});
   G.actualDeath=deaths;
-  deaths.forEach(d=>{
-    G.players[d.id-1].alive=false;
-  });
+  deaths.forEach(d=>{ G.players[d.id-1].alive=false; });
   updatePlayerGrid();
 
   if(deaths.length===0){ await godSay('昨晚是平安夜，无人死亡 ✨'); }
@@ -654,14 +650,12 @@ async function dayDiscussion(){
       $('actionPrompt').textContent = `🗣 轮到你发言了（${p.id}号）`;
       $('textInput').placeholder = '输入你的发言...';
       const speech = await waitForText();
-      if(G.aborted) return;
       const finalText = speech || '（沉默）';
       playerSay(p.id, finalText);
       G.roundSpeeches.push({playerId:p.id, text:finalText});
       hideSpeechInput(); setActions('等待其他人发言...', []);
     } else {
       const aiSpeech = await aiGenerateSpeech(p);
-      if(G.aborted) return;
       playerSay(p.id, aiSpeech);
       G.roundSpeeches.push({playerId:p.id, text:aiSpeech});
       setActions(`💬 ${p.id}号正在发言...（AI语音播报中）`, [
@@ -672,7 +666,6 @@ async function dayDiscussion(){
       const spoke = speakText(aiSpeech, voiceOpts);
       const skipped = waitForClick(['btnSkipSpeech']);
       await Promise.race([spoke, skipped]);
-      if(G.aborted){ skipSpeech(); return; }
       skipSpeech();
       setActions('等待其他人发言...', []);
       await sleep(200+Math.random()*300);
@@ -696,7 +689,6 @@ async function votingPhase(){
       })));
       setCardsSelectable(candidates.map(c=>c.id), id=>{ const btn=$('vote_'+id); if(btn)btn.click(); });
       const chosen = await waitForClick(candidates.map(c=>'vote_'+c.id));
-      if(G.aborted) return;
       clearCardsSelectable();
       const target = parseInt(chosen.replace('vote_',''));
       G.voteResults[target]++; systemSay(`你投票给了 ${target} 号`);
@@ -835,12 +827,15 @@ function buildPromptForPlayer(player){
 
   return `你是${player.id}号玩家。9人狼人杀（3狼1预言1女巫1猎人3平民）。
 
+【游戏规则】只有以下环节：天黑→狼人选刀→预言家查验→女巫用药→天亮→轮流发言→投票放逐→天黑循环。没有警长、没有警徽、没有上警环节、没有警上竞选。
+
 【真实身份】${role.emoji} ${role.name}
 ${wolfInfo}${seerInfo}
 【局势】第${G.round}轮白天 | 存活：${aliveIds.join('、')}号 | 出局：${deadIds.length>0?deadIds.join('、')+'号':'无'} | ${nightInfo}
 
 ${prevSpeeches}
 【策略】${strategy}
+【禁止】本局没有警长竞选环节，绝对不能说"警上""警下""警长""警徽""上警""竞选警长""警徽流"。其他狼人杀术语（查杀、金水、悍跳等）可以正常使用。
 【要求】3-5句话，自然流畅，有明确怀疑对象。只输出发言内容，不加前缀。`;
 }
 
@@ -858,7 +853,15 @@ async function callDeepSeek(prompt){
     if(!resp.ok){ console.error('API错误:',resp.status); return null; }
     const data=await resp.json();
     const content=data.choices?.[0]?.message?.content;
-    if(content) return content.trim().replace(/^["'""]/,'').replace(/["'""]$/,'').replace(/^（.+?）\s*/,'').replace(/^\d+号[说：:]\s*/,'');
+    if(content){
+      let text = content.trim()
+        .replace(/^["'""]/,'').replace(/["'""]$/,'')
+        .replace(/^（.+?）\s*/,'')
+        .replace(/^\d+号[说：:]\s*/,'')
+        .replace(/警上|警下|警长|警徽|上警|竞选警长|警徽流/g,'');
+      if(text.length < 5) return null;
+      return text;
+    }
     return null;
   }catch(e){ console.error('API失败:',e); return null; }
 }
@@ -869,7 +872,6 @@ async function aiGenerateSpeech(player){
     setActions(`🤖 ${player.id}号正在思考...`,[]);
     const prompt=buildPromptForPlayer(player);
     const result=await callDeepSeek(prompt);
-    if(G.aborted) return '...';
     if(result) return result;
     systemSay('⚠️ API失败，使用备用发言');
   }
@@ -913,7 +915,6 @@ const VOICE_PROFILES={
 
 function speakText(text, options={}){
   return new Promise(resolve=>{
-    if(G.aborted){ resolve(); return; }
     if(muteAI||!text||typeof speechSynthesis==='undefined'){ resolve(); return; }
     speechSynthesis.cancel();
     const utter=new SpeechSynthesisUtterance(text);
