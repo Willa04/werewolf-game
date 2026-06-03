@@ -259,6 +259,33 @@
     font-family: inherit;
   }
   .btn-skip-speech:hover { background: rgba(255,255,255,0.18); }
+  .api-config {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    border: 1px solid var(--border);
+  }
+  .api-config label { color: var(--muted); white-space: nowrap; }
+  .api-config input {
+    flex: 1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.8rem;
+    outline: none;
+  }
+  .api-config input:focus { border-color: var(--accent); }
+  .api-config .api-status { font-size: 0.75rem; white-space: nowrap; }
+  .api-config .api-status.ok { color: var(--good); }
+  .api-config .api-status.no { color: var(--muted); }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -273,6 +300,13 @@
     <span id="phaseLabel">⏳ 准备开始</span>
     <span style="color:var(--muted);font-size:0.8rem;" id="roundLabel"></span>
     <button class="btn-mute" id="btnMute" onclick="toggleMute()" title="切换AI语音">🔊</button>
+  </div>
+
+  <!-- API 配置 -->
+  <div class="api-config" id="apiConfig">
+    <label>🔑 DeepSeek Key:</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-..." onchange="saveApiKey()">
+    <span class="api-status no" id="apiStatus">未设置</span>
   </div>
 
   <!-- 玩家面板 -->
@@ -316,6 +350,26 @@ const R = {
 
 const POOL = ['SEER','WITCH','HUNTER','WOLF','WOLF','WOLF','VILL','VILL','VILL'];
 const N = 9;
+const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
+
+// ============ API Key 管理 ============
+function saveApiKey(){
+  const key = $('apiKeyInput').value.trim();
+  if(key) localStorage.setItem('deepseek_key', key);
+  updateApiStatus();
+}
+function loadApiKey(){
+  const saved = localStorage.getItem('deepseek_key') || '';
+  $('apiKeyInput').value = saved;
+  updateApiStatus();
+}
+function getApiKey(){ return $('apiKeyInput').value.trim() || localStorage.getItem('deepseek_key') || ''; }
+function updateApiStatus(){
+  const has = !!getApiKey();
+  const el = $('apiStatus');
+  el.textContent = has ? '已设置' : '未设置';
+  el.className = 'api-status ' + (has ? 'ok' : 'no');
+}
 
 // ============ 全局状态 ============
 let G = {
@@ -337,6 +391,8 @@ let G = {
   discussionLog: [],
   speechesThisRound: 0,
   voteResults: {},
+  seerChecks: [],      // [{round, targetId, isWolf}]
+  roundSpeeches: [],   // [{playerId, text}]
   // 缓存
   resolve: null,       // Promise resolve for waiting human input
 };
@@ -497,6 +553,8 @@ async function startGame(){
     discussionLog: [],
     speechesThisRound: 0,
     voteResults: {},
+    seerChecks: [],
+    roundSpeeches: [],
     resolve: null,
   };
 
@@ -545,6 +603,7 @@ async function startRound(){
   G.nightKill = null;
   G.actualDeath = null;
   G.speechesThisRound = 0;
+  G.roundSpeeches = [];
   G.voteResults = {};
 
   updateStatus('night', G.round);
@@ -600,12 +659,15 @@ async function startRound(){
     })));
     const chosen = await waitForClick(targets.map(p=>'seerTarget_'+p.id));
     seerTarget = parseInt(chosen.replace('seerTarget_',''));
-    // 告诉人类查验结果
     const targetRole = G.players[seerTarget-1];
     const isWolf = R[targetRole.roleKey].camp === 'wolf';
     systemSay(`🔮 查验结果：${seerTarget}号是 ${isWolf?'🐺 狼人！':'✅ 好人'}`);
+    G.seerChecks.push({round:G.round, targetId:seerTarget, isWolf});
   } else {
     seerTarget = aiSeerTarget();
+    // AI预言家的查验也记录下来
+    const targetRole2 = G.players[seerTarget-1];
+    G.seerChecks.push({round:G.round, targetId:seerTarget, isWolf: R[targetRole2.roleKey].camp==='wolf'});
   }
   G.nightTargets.seer = seerTarget;
   await sleep(400);
@@ -792,16 +854,17 @@ async function dayDiscussion(){
       $('textInput').placeholder = '输入你的发言...';
 
       const speech = await waitForText();
-      // 用户可能用语音或文字输入
       const finalText = speech || '（沉默）';
       playerSay(p.id, finalText);
+      G.roundSpeeches.push({playerId: p.id, text: finalText});
 
       hideSpeechInput();
       setActions('等待其他人发言...', []);
     } else {
-      // AI 发言 — 语音播报
-      const aiSpeech = aiGenerateSpeech(p);
+      // AI 发言 — DeepSeek API 生成 + 语音播报
+      const aiSpeech = await aiGenerateSpeech(p);
       playerSay(p.id, aiSpeech);
+      G.roundSpeeches.push({playerId: p.id, text: aiSpeech});
 
       // 显示跳过按钮 + 播报语音
       setActions(`💬 ${p.id}号正在发言...（AI语音播报中）`, [
@@ -1024,67 +1087,194 @@ function aiHunterShot(hunterId){
 }
 
 // ============ AI 发言生成 ============
-const SPEECH_TEMPLATES = {
-  aggressive: [
-    '我强烈怀疑{target}，他昨天的发言很可疑！建议大家集中票他。',
-    '{target}肯定有问题，我直觉很准，跟我投！',
-    '别犹豫了，{target}就是狼，大家跟我上票！',
-  ],
-  analytical: [
-    '根据目前的局势分析，{target}的投票记录不太对劲，值得关注。',
-    '我觉得应该理性分析一下，{target}的行为模式有些异常。',
-    '从数据来看，我倾向于怀疑{target}。大家怎么看？',
-  ],
-  cautious: [
-    '我感觉{target}有点可疑，但也不排除其他人。大家再想想。',
-    '我不太确定，不过{target}的发言让我有点在意。',
-    '谨慎一点吧，虽然{target}值得怀疑，但还是要多观察。',
-  ],
-  follower: [
-    '我跟大家的意见，{target}确实比较可疑。',
-    '我也觉得{target}有问题，跟大家投一样的。',
-    '我不太会分析，相信大家的判断，{target}吧。',
-  ],
-  defensive: [
-    '我是好人，请大家相信我。我觉得{target}才值得怀疑。',
-    '我身份是好的，别被误导了！{target}才是真正的狼！',
-    '我敢发誓我是好人阵营的，请大家把注意力放在{target}身上。',
-  ],
-};
+// ============ DeepSeek API 发言生成 ============
 
-function aiGenerateSpeech(player){
-  // 选择发言怀疑的目标
-  const suspects = alivePlayers().filter(p => p.id !== player.id);
-  if(suspects.length === 0) return '我觉得没什么好说的...';
+/**
+ * 为指定 AI 玩家构建 Prompt
+ * 包含：秘密身份、游戏状态、已有发言、角色策略
+ */
+function buildPromptForPlayer(player){
+  const role = R[player.roleKey];
+  const isWolf = role.camp === 'wolf';
+  const aliveIds = alivePlayers().map(p=>p.id);
+  const deadIds = G.players.filter(p=>!p.alive).map(p=>p.id);
 
-  // 狼人会假装怀疑好人
-  let target;
-  const isWolf = R[player.roleKey].camp === 'wolf';
+  // 昨晚发生了什么
+  let nightInfo = '';
+  if(G.actualDeath && G.actualDeath.length > 0){
+    nightInfo = G.actualDeath.map(d => `${d.id}号玩家${d.cause}`).join('，');
+  } else if(G.round > 0){
+    nightInfo = '昨晚是平安夜，无人死亡';
+  }
+
+  // 狼同伴（仅狼人可见）
+  let wolfInfo = '';
   if(isWolf){
-    const goodTargets = suspects.filter(p => R[p.roleKey].camp === 'good');
-    target = goodTargets.length > 0 ? goodTargets[Math.floor(Math.random()*goodTargets.length)] : suspects[0];
+    const mates = G.players.filter(p=>p.roleKey==='WOLF' && p.id!==player.id && p.alive).map(p=>p.id+'号');
+    const deadWolves = G.players.filter(p=>p.roleKey==='WOLF' && !p.alive).map(p=>p.id+'号');
+    wolfInfo = `你的狼同伴是：${mates.join('、')}。`;
+    if(deadWolves.length > 0) wolfInfo += `（${deadWolves.join('、')}已出局）`;
+  }
+
+  // 预言家查验记录（仅预言家可见）
+  let seerInfo = '';
+  if(player.roleKey === 'SEER' && G.seerChecks.length > 0){
+    const checks = G.seerChecks.filter(c=>{
+      // AI预言家只有自己的记录，人类预言家也只有自己的
+      if(player.isHuman) return true;
+      // AI seer: all AI seer checks
+      return true;
+    });
+    seerInfo = '你的查验记录：\n';
+    G.seerChecks.forEach(c => {
+      const target = G.players[c.targetId-1];
+      seerInfo += `- 第${c.round}轮查验${c.targetId}号：${c.isWolf?'狼人':'好人'}\n`;
+    });
+  }
+
+  // 角色发言策略
+  let strategy = '';
+  if(isWolf){
+    strategy = `你是狼人，必须伪装成好人。发言策略：
+- 像普通村民一样推理，分析谁可能是狼人
+- 可以把嫌疑引到好人身上，但不能太刻意
+- 绝对不能暴露自己或同伴的身份
+- 如果有人怀疑你或你的同伴，要巧妙反驳
+- 可以假装跟风别人的怀疑`;
+  } else if(player.roleKey === 'SEER'){
+    strategy = `你是预言家，但绝对不能暴露身份。发言策略：
+- 以平民身份发言，但可以"直觉很准"地引导大家
+- 如果查验到狼人，可以"感觉"那个人很可疑，带头怀疑他
+- 如果查验到好人，可以说"我觉得他是好人"
+- 不要说"我查验过"，只能说"我觉得""我感觉"
+- 发言要自然，像一个普通村民在推理`;
+  } else if(player.roleKey === 'WITCH'){
+    strategy = `你是女巫，以平民身份发言。发言策略：
+- 完全像平民一样推理和发言
+- 如果你用了解药救了某人，可能在发言中稍微维护他
+- 如果你用了毒药毒了某人（且是狼人），可以暗自高兴
+- 除非迫不得已，不要暴露女巫身份`;
+  } else if(player.roleKey === 'HUNTER'){
+    strategy = `你是猎人，以平民身份发言。发言策略：
+- 像普通平民一样发言
+- 如果有人强烈攻击你，可以适度回击但不暴露身份
+- 只有在你快被投出去时才暗示自己有能力`;
   } else {
-    // 好人有概率怀疑狼人，也有概率瞎猜
-    const wolfTargets = suspects.filter(p => R[p.roleKey].camp === 'wolf');
-    if(wolfTargets.length > 0 && Math.random() < 0.5){
-      target = wolfTargets[Math.floor(Math.random()*wolfTargets.length)];
-    } else {
-      target = suspects[Math.floor(Math.random()*suspects.length)];
+    strategy = `你是普通平民，没有任何特殊能力。发言策略：
+- 仔细听别人的发言，找出矛盾或可疑之处
+- 表达自己的怀疑对象和理由
+- 可以跟风，也可以提出不同意见
+- 努力帮好人阵营找出狼人`;
+  }
+
+  // 已有发言记录
+  let prevSpeeches = '';
+  if(G.roundSpeeches.length > 0){
+    prevSpeeches = '【本轮已发言的玩家】\n';
+    G.roundSpeeches.forEach(s => {
+      prevSpeeches += `${s.playerId}号说："${s.text}"\n`;
+    });
+  } else {
+    prevSpeeches = '（本轮还没有人发言，你是第一个）';
+  }
+
+  const prompt = `你正在玩一局9人狼人杀游戏，你是${player.id}号玩家。
+
+【游戏规则】
+9名玩家：3狼人、1预言家、1女巫、1猎人、3平民
+狼人每晚杀一人，预言家每晚查一人
+狼人赢：杀光所有神职 或 杀光所有平民
+好人赢：投票放逐所有狼人
+
+【你的真实身份】${role.emoji} ${role.name}
+${wolfInfo}
+${seerInfo}
+
+【游戏局势】
+当前第${G.round}轮，白天发言阶段
+存活玩家：${aliveIds.join('号、')}号
+已出局玩家：${deadIds.length>0 ? deadIds.join('号、')+'号' : '无'}
+${nightInfo}
+
+${prevSpeeches}
+
+【你的发言策略】
+${strategy}
+
+【发言要求】
+- 3到5句话，像真人玩家一样自然
+- 要有明确的怀疑对象，给出简要理由
+- 语气自然，像是在跟其他玩家对话
+- 只输出发言内容本身，不要加"XX号说："前缀
+- 不要加任何解释、说明或括号注释`;
+
+  return prompt;
+}
+
+/** 调用 DeepSeek API 生成发言 */
+async function callDeepSeek(prompt){
+  const apiKey = getApiKey();
+  if(!apiKey) return null;
+
+  try {
+    const resp = await fetch(DEEPSEEK_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: '你是一个狼人杀玩家，你的发言要像真人一样自然。只输出发言内容。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.9,
+        max_tokens: 300,
+      }),
+    });
+
+    if(!resp.ok){
+      const err = await resp.json().catch(()=>({}));
+      console.error('DeepSeek API 错误:', resp.status, err);
+      return null;
     }
+
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content;
+    if(content){
+      // 清理：去掉可能的引号、"XX号说："前缀等
+      return content.trim()
+        .replace(/^["'""]/,'').replace(/["'""]$/,'')
+        .replace(/^（.+?）\s*/,'')
+        .replace(/^\d+号[说：:]\s*/,'');
+    }
+    return null;
+  } catch(e){
+    console.error('DeepSeek 调用失败:', e);
+    return null;
+  }
+}
+
+/** AI 发言：优先用 DeepSeek API，失败时回退到简单模板 */
+async function aiGenerateSpeech(player){
+  const apiKey = getApiKey();
+
+  // 有 API Key 则调用 DeepSeek
+  if(apiKey){
+    setActions(`🤖 ${player.id}号正在思考...（AI生成中）`, []);
+    const prompt = buildPromptForPlayer(player);
+    const result = await callDeepSeek(prompt);
+    if(result) return result;
+    // API 失败，回退
+    systemSay('⚠️ API调用失败，使用备用发言');
   }
 
-  const personality = player.personality;
-  const templates = SPEECH_TEMPLATES[personality] || SPEECH_TEMPLATES.cautious;
-  let text = templates[Math.floor(Math.random() * templates.length)];
-  text = text.replace(/\{target\}/g, target.id + '号');
-
-  // 如果最近有人死亡，加上评论
-  if(G.actualDeath && G.actualDeath.length > 0 && Math.random() < 0.4){
-    const deadId = G.actualDeath[0].id;
-    text += ` 对${deadId}号的死感到非常震惊。`;
-  }
-
-  return text;
+  // 备用：简单模板发言
+  const suspects = alivePlayers().filter(p => p.id !== player.id);
+  if(suspects.length === 0) return '我觉得没什么好说的，大家看着投吧。';
+  const target = suspects[Math.floor(Math.random() * suspects.length)];
+  return `我觉得${target.id}号有点可疑，发言不太自然。大家怎么看？我暂时倾向于怀疑他，但还需要更多信息来确认。`;
 }
 
 /** AI 投票：根据发言和角色决定 */
@@ -1301,6 +1491,7 @@ function stopMic(){
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
 // ============ 初始页面 ============
+loadApiKey();
 updatePlayerGrid();
 for(let i=1;i<=N;i++){
   const chip = document.querySelector('.player-chip:nth-child('+i+')');
