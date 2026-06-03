@@ -449,6 +449,7 @@ async function startGame(){
   $('btnEnd').style.display = 'flex'; // 显示结束按钮
   systemSay('🎭 角色已随机分配完毕'); systemSay('');
   await godSay(`请 ${humanPlayer().id} 号玩家查看自己的身份`);
+  if(G.aborted) return; // 可能被endGame中断
   const human = humanPlayer();
   const role = R[human.roleKey];
   setActions(`🎭 你的身份：${role.emoji} ${role.name}（${human.id}号）`, [
@@ -459,6 +460,7 @@ async function startGame(){
     $('actionPrompt').textContent += ` | 🐺 狼同伴：${mates}`;
   }
   updateDebug();
+  if(G.aborted) return; // 再次检查
   waitForClick(['btnStartGame']).then(() => startRound());
 }
 
@@ -741,11 +743,14 @@ async function checkWin(){
 async function gameOver(winner){
   G.phase='gameover'; updateStatus('gameover', G.round);
   await godSay('══════════════');
+  if(G.aborted) return;
   if(winner==='wolf'){
     await godSay('🐺 狼人阵营获胜！');
+    if(G.aborted) return;
     systemSay(humanPlayer().roleKey==='WOLF'?'🎉 恭喜你赢了！狼人屠城成功！':'💀 狼人屠城了...你输了');
   } else {
     await godSay('🎉 好人阵营获胜！');
+    if(G.aborted) return;
     systemSay(R[humanPlayer().roleKey].camp==='good'?'🎉 恭喜你赢了！所有狼人被消灭！':'💀 你的狼人同伴全被消灭了...');
   }
   systemSay(''); systemSay('—— 身份揭晓 ——');
@@ -754,6 +759,7 @@ async function gameOver(winner){
     systemSay(`${p.id}号：${role.emoji} ${role.name} ${!p.alive?'💀':''} ${p.isHuman?'👈':''}`);
   });
   updatePlayerGrid(); updateDebug();
+  if(G.aborted) return;
   $('btnEnd').style.display = 'none';
   setActions('游戏结束！', [{id:'btnRestart', label:'🔄 再来一局', cls:'btn-start'}]);
   waitForClick(['btnRestart']).then(()=>startGame());
