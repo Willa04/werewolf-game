@@ -6,375 +6,183 @@
 <title>狼人杀 - 9人局</title>
 <style>
   :root {
-    --bg: #0d0d1a;
-    --card: #141428;
-    --accent: #e94560;
-    --gold: #f5c518;
-    --text: #e0e0e0;
-    --muted: #7a7a9e;
-    --good: #4ecca3;
-    --wolf: #e94560;
-    --btn-bg: #1a1a40;
-    --border: rgba(255,255,255,0.06);
-    --log-bg: #0a0a18;
+    --bg-night: #070b19; --bg-day: #0f1528;
+    --card-bg: rgba(20,24,52,0.85); --card-border: rgba(255,255,255,0.08);
+    --accent: #e94560; --gold: #f0c040; --gold-dim: #8a7030;
+    --text: #e0e0e8; --muted: #6a6a8a;
+    --good: #4ecca3; --wolf: #e94560;
+    --log-system: #8899bb; --log-god: #f0c040; --log-death: #e94560; --log-speech: #e0d8c0;
+    --glow-gold: 0 0 20px rgba(240,192,64,0.3);
+    --glow-red: 0 0 20px rgba(233,69,96,0.3);
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif;
+    background:var(--bg-night);color:var(--text);
+    min-height:100vh;overflow-x:hidden;
+    transition:background 1.2s ease;
   }
-  .container {
-    width: 100%;
-    max-width: 680px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
+  body.day-mode{background:var(--bg-day)}
 
-  /* 顶部 */
-  .header {
-    text-align: center;
-    padding: 8px 0 4px;
-    flex-shrink: 0;
-  }
-  .header h1 {
-    font-size: 1.5rem;
-    letter-spacing: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .header .badge {
-    font-size: 0.75rem;
-    background: var(--btn-bg);
-    padding: 4px 10px;
-    border-radius: 20px;
-    color: var(--muted);
-  }
+  /* 星空背景 */
+  .stars{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.7;transition:opacity 1.2s}
+  body.day-mode .stars{opacity:.15}
+  .star{position:absolute;background:#fff;border-radius:50%;animation:twinkle var(--dur) ease-in-out infinite;animation-delay:var(--delay)}
+  @keyframes twinkle{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.8)}}
 
-  /* 状态栏 */
-  .status-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 14px;
-    background: var(--card);
-    border-radius: 10px;
-    margin: 8px 0;
-    flex-shrink: 0;
-    font-size: 0.9rem;
-    border: 1px solid var(--border);
-  }
-  .phase-tag {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.8rem;
-  }
-  .phase-tag.night { background: #1a1a50; color: #8899dd; }
-  .phase-tag.day { background: #2a1a10; color: #dd9944; }
+  .container{position:relative;z-index:1;width:100%;max-width:520px;margin:0 auto;padding:12px 16px 24px;display:flex;flex-direction:column;min-height:100vh}
 
-  /* 玩家网格 */
-  .players-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin: 8px 0;
-    flex-shrink: 0;
-  }
-  .player-chip {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    background: var(--card);
-    border-radius: 8px;
-    font-size: 0.82rem;
-    border: 1px solid var(--border);
-    transition: all 0.3s;
-  }
-  .player-chip.dead { opacity: 0.35; text-decoration: line-through; }
-  .player-chip.human { border-color: var(--gold); }
-  .player-chip .num {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    background: var(--btn-bg);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.75rem;
-    flex-shrink: 0;
-  }
-  .player-chip.human .num { background: var(--gold); color: #000; }
-  .player-chip.dead .num { background: #333; }
-  .player-chip .tag {
-    font-size: 0.65rem;
-    padding: 1px 6px;
-    border-radius: 10px;
-    margin-left: auto;
-  }
-  .player-chip .tag.good { background: rgba(78,204,163,0.15); color: var(--good); }
-  .player-chip .tag.wolf { background: rgba(233,69,96,0.15); color: var(--wolf); }
+  /* 顶部栏 */
+  .top-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--card-bg);border-radius:14px;border:1px solid var(--card-border);backdrop-filter:blur(8px);margin-bottom:10px;flex-shrink:0}
+  .phase-indicator{display:flex;align-items:center;gap:8px}
+  .phase-icon{font-size:1.5rem;transition:all .5s}
+  .phase-text{font-weight:700;font-size:.95rem}
+  .phase-text.night{color:#8899dd}.phase-text.day{color:#f0c040}
+  .round-badge{background:rgba(255,255,255,.06);padding:4px 12px;border-radius:20px;font-size:.78rem;color:var(--muted)}
 
-  /* 主舞台 — 上帝旁白 + 讨论区 */
-  .stage {
-    flex: 1;
-    background: var(--log-bg);
-    border-radius: 12px;
-    padding: 12px;
-    margin: 8px 0;
-    overflow-y: auto;
-    max-height: 380px;
-    font-size: 0.88rem;
-    line-height: 1.7;
-    border: 1px solid var(--border);
-  }
-  .stage .line { margin-bottom: 4px; animation: fadeIn 0.3s; }
-  .stage .god { color: #f5c518; }
-  .stage .player-speech { color: #d0d0e0; }
-  .stage .player-speech .speaker { color: #88bbff; font-weight: 600; }
-  .stage .death { color: #e94560; font-weight: 600; }
-  .stage .system { color: var(--muted); font-style: italic; font-size: 0.8rem; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  /* 玩家卡片 */
+  .players-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;flex-shrink:0}
+  .player-card{position:relative;background:var(--card-bg);border:1.5px solid var(--card-border);border-radius:12px;padding:10px 6px;text-align:center;cursor:default;transition:all .4s;backdrop-filter:blur(4px);user-select:none}
+  .player-card.selectable{cursor:pointer;border-color:rgba(255,255,255,.18)}
+  .player-card.selectable:hover{border-color:var(--accent);background:rgba(233,69,96,.12);transform:translateY(-3px);box-shadow:0 8px 24px rgba(233,69,96,.2)}
+  .player-card.selectable:active{transform:scale(.95)}
+  .player-card.speaking{border-color:var(--gold)!important;box-shadow:var(--glow-gold);animation:spkPulse 1.2s ease-in-out infinite}
+  @keyframes spkPulse{0%,100%{box-shadow:0 0 8px rgba(240,192,64,.2)}50%{box-shadow:0 0 24px rgba(240,192,64,.5)}}
+  .player-card.dead{opacity:.45;filter:grayscale(.7);border-color:transparent}
+  .player-card.dead .card-avatar{filter:grayscale(1)}
+  .player-card.human{border-color:rgba(240,192,64,.4)}
+  .card-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);font-weight:800;font-size:.8rem;margin-bottom:4px}
+  .player-card.human .card-num{background:var(--gold);color:#1a1a2e}
+  .player-card.dead .card-num{background:#333;color:#666}
+  .card-avatar{font-size:1.8rem;margin:2px 0;transition:all .4s}
+  .card-label{font-size:.7rem;color:var(--muted)}
+  .card-badge{position:absolute;top:-4px;right:-4px;font-size:.62rem;background:var(--accent);color:#fff;padding:2px 7px;border-radius:10px;font-weight:700}
+  .card-badge.you{background:var(--gold);color:#1a1a2e}
+
+  /* 日志区 */
+  .log-area{flex:1;background:rgba(0,0,0,.35);border-radius:14px;padding:14px;margin-bottom:10px;overflow-y:auto;max-height:45vh;min-height:180px;border:1px solid var(--card-border);font-size:.85rem;line-height:1.8;scroll-behavior:smooth}
+  .log-area::-webkit-scrollbar{width:3px}.log-area::-webkit-scrollbar-track{background:transparent}.log-area::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+  .log-line{margin-bottom:3px;animation:logIn .4s ease;padding:2px 0}
+  @keyframes logIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .log-line.god{color:var(--log-god);font-weight:600}
+  .log-line.system{color:var(--log-system)}
+  .log-line.death{color:var(--log-death);font-weight:700;font-size:.9rem}
+  .log-line.speech{color:var(--log-speech)}
+  .log-line.speech .spkr{color:#88bbff;font-weight:700}
 
   /* 操作区 */
-  .actions {
-    flex-shrink: 0;
-    background: var(--card);
-    border-radius: 12px;
-    padding: 14px;
-    margin: 4px 0 8px;
-    border: 1px solid var(--border);
-  }
-  .actions .prompt {
-    font-size: 0.9rem;
-    margin-bottom: 10px;
-    color: var(--text);
-    font-weight: 600;
-  }
-  .btn-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .btn {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.15s;
-    color: #fff;
-  }
-  .btn:active { transform: scale(0.96); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-primary { background: var(--accent); }
-  .btn-primary:hover:not(:disabled) { background: #ff5a7a; }
-  .btn-action { background: #2a5a9a; }
-  .btn-action:hover:not(:disabled) { background: #3a6aaa; }
-  .btn-skip { background: #444; }
-  .btn-skip:hover:not(:disabled) { background: #555; }
-  .btn-mic {
-    background: #555;
-    font-size: 0.85rem;
-  }
-  .btn-mic:hover:not(:disabled) { background: #666; }
-  .btn-mic.listening { background: var(--accent); animation: pulseBtn 1.5s infinite; }
-  @keyframes pulseBtn {
-    0%,100% { box-shadow: 0 0 0 0 rgba(233,69,96,0.5); }
-    50% { box-shadow: 0 0 0 10px rgba(233,69,96,0); }
-  }
-  .btn-start {
-    background: linear-gradient(135deg, #e94560, #ff6b3d);
-    font-size: 1.1rem;
-    padding: 14px 28px;
-    width: 100%;
-  }
-  .btn-start:hover:not(:disabled) {
-    background: linear-gradient(135deg, #ff5a7a, #ff8a5d);
-  }
+  .action-area{flex-shrink:0;background:var(--card-bg);border-radius:14px;padding:14px 16px;border:1px solid var(--card-border);backdrop-filter:blur(8px)}
+  .action-prompt{font-size:.9rem;font-weight:600;margin-bottom:10px;text-align:center}
+  .action-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .btn{padding:11px 18px;border:none;border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;color:#fff;position:relative;overflow:hidden}
+  .btn::after{content:'';position:absolute;top:50%;left:50%;width:0;height:0;border-radius:50%;background:rgba(255,255,255,.2);transform:translate(-50%,-50%);transition:width .6s,height .6s}
+  .btn:active::after{width:300px;height:300px}
+  .btn:active{transform:scale(.95)}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+  .btn-action{background:linear-gradient(135deg,#2a4a8a,#3a5aaa);box-shadow:0 2px 8px rgba(42,74,138,.3)}
+  .btn-action:hover:not(:disabled){background:linear-gradient(135deg,#3a5aaa,#4a6aba);box-shadow:0 4px 16px rgba(42,74,138,.5);transform:translateY(-2px)}
+  .btn-danger{background:linear-gradient(135deg,#8a2a3a,#aa3a4a)}
+  .btn-danger:hover:not(:disabled){background:linear-gradient(135deg,#aa3a4a,#ba4a5a);transform:translateY(-2px)}
+  .btn-accent{background:linear-gradient(135deg,#c0392b,#e94560);box-shadow:0 2px 12px rgba(233,69,96,.3)}
+  .btn-accent:hover:not(:disabled){background:linear-gradient(135deg,#e94560,#ff5a7a);transform:translateY(-2px);box-shadow:0 4px 20px rgba(233,69,96,.5)}
+  .btn-skip{background:rgba(255,255,255,.08);color:#aaa}
+  .btn-skip:hover:not(:disabled){background:rgba(255,255,255,.14)}
+  .btn-start{background:linear-gradient(135deg,#c0392b,#e94560,#ff6b3d);font-size:1.05rem;padding:14px 32px;width:100%;box-shadow:0 4px 20px rgba(233,69,96,.4)}
+  .btn-start:hover:not(:disabled){box-shadow:0 6px 30px rgba(233,69,96,.6);transform:translateY(-2px)}
+  .btn-mic-btn{background:rgba(255,255,255,.08);font-size:1.1rem;min-width:44px;border-radius:50%;padding:10px;aspect-ratio:1}
+  .btn-mic-btn:hover:not(:disabled){background:rgba(255,255,255,.16)}
+  .btn-mic-btn.listening{background:var(--accent);animation:micPulse 1.5s infinite}
+  @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(233,69,96,.5)}50%{box-shadow:0 0 0 12px rgba(233,69,96,0)}}
 
-  /* 语音输入区 */
-  .speech-bar {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-top: 8px;
-  }
-  .speech-bar input {
-    flex: 1;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 0.9rem;
-    outline: none;
-  }
-  .speech-bar input:focus { border-color: var(--accent); }
-  .mic-status-line {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-top: 4px;
-    min-height: 18px;
-  }
+  .speech-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .speech-row input{flex:1;padding:10px 14px;border-radius:10px;border:1px solid var(--card-border);background:rgba(0,0,0,.3);color:var(--text);font-family:inherit;font-size:.9rem;outline:none;transition:border .2s}
+  .speech-row input:focus{border-color:var(--accent)}
+  .mic-status{font-size:.75rem;color:var(--muted);min-height:18px;margin-top:4px}
 
-  /* 滚动条 */
-  .stage::-webkit-scrollbar { width: 4px; }
-  .stage::-webkit-scrollbar-track { background: transparent; }
-  .stage::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .api-row{display:flex;align-items:center;gap:8px;padding:6px 14px;margin-bottom:10px;background:var(--card-bg);border-radius:10px;border:1px solid var(--card-border);font-size:.78rem;flex-shrink:0}
+  .api-row label{color:var(--muted);white-space:nowrap;font-size:.75rem}
+  .api-row input{flex:1;padding:5px 10px;border-radius:6px;border:1px solid var(--card-border);background:rgba(0,0,0,.3);color:var(--text);font-family:inherit;font-size:.78rem;outline:none}
+  .api-row input:focus{border-color:var(--accent)}
+  .api-dot{font-size:.7rem;white-space:nowrap}.api-dot.ok{color:var(--good)}.api-dot.no{color:var(--muted)}
 
-  /* 调试 */
-  .debug-info {
-    font-size: 0.7rem;
-    color: var(--muted);
-    text-align: center;
-    opacity: 0.5;
-    flex-shrink: 0;
-    padding: 4px 0;
-  }
-  .btn-mute {
-    background: none; border: 1px solid var(--border);
-    color: var(--text); font-size: 1rem;
-    width: 32px; height: 32px; border-radius: 50%;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-  .btn-mute:hover { background: rgba(255,255,255,0.08); }
-  .btn-mute.muted { color: var(--muted); border-color: #444; }
-  .btn-skip-speech {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid var(--border);
-    color: #ccc; font-size: 0.82rem;
-    padding: 6px 14px; border-radius: 16px;
-    cursor: pointer; transition: all 0.2s;
-    font-family: inherit;
-  }
-  .btn-skip-speech:hover { background: rgba(255,255,255,0.18); }
-  .api-config {
-    background: var(--card);
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.82rem;
-    border: 1px solid var(--border);
-  }
-  .api-config label { color: var(--muted); white-space: nowrap; }
-  .api-config input {
-    flex: 1;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 0.8rem;
-    outline: none;
-  }
-  .api-config input:focus { border-color: var(--accent); }
-  .api-config .api-status { font-size: 0.75rem; white-space: nowrap; }
-  .api-config .api-status.ok { color: var(--good); }
-  .api-config .api-status.no { color: var(--muted); }
-  .hidden { display: none !important; }
+  .btn-mute{background:none;border:1px solid var(--card-border);color:var(--text);font-size:1rem;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+  .btn-mute:hover{background:rgba(255,255,255,.08)}.btn-mute.muted{color:var(--muted);border-color:#444}
 
-  /* 密码锁屏 */
-  .lock-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: var(--bg);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    z-index: 999;
-  }
-  .lock-box {
-    background: var(--card);
-    border-radius: 16px;
-    padding: 32px 28px;
-    border: 1px solid var(--border);
-    text-align: center;
-    max-width: 340px;
-    width: 90%;
-  }
-  .lock-box h2 { margin-bottom: 8px; }
-  .lock-box p { color: var(--muted); font-size: 0.85rem; margin-bottom: 18px; }
-  .lock-box input {
-    width: 100%;
-    padding: 12px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--bg);
-    color: var(--text);
-    font-family: inherit;
-    font-size: 1rem;
-    text-align: center;
-    outline: none;
-    margin-bottom: 12px;
-  }
-  .lock-box input:focus { border-color: var(--accent); }
-  .lock-box .lock-msg { color: var(--accent); font-size: 0.8rem; min-height: 20px; }
+  .night-veil{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,20,0);pointer-events:none;z-index:5;transition:background 1.5s ease}
+  .night-veil.active{background:rgba(0,0,20,.35)}
+
+  .lock-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#050816;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
+  .lock-box{background:var(--card-bg);border-radius:16px;padding:32px 28px;border:1px solid var(--card-border);text-align:center;max-width:340px;width:90%}
+  .lock-box h2{margin-bottom:8px;font-size:1.5rem}.lock-box p{color:var(--muted);font-size:.85rem;margin-bottom:18px}
+  .lock-box input{width:100%;padding:12px 14px;border-radius:8px;border:1px solid var(--card-border);background:rgba(0,0,0,.4);color:var(--text);font-family:inherit;font-size:1rem;text-align:center;outline:none;margin-bottom:12px}
+  .lock-box input:focus{border-color:var(--accent)}.lock-box .lock-msg{color:var(--accent);font-size:.8rem;min-height:20px}
+
+  .gameover-banner{text-align:center;padding:20px 0}
+  .gameover-banner .result-icon{font-size:3rem;margin-bottom:10px}
+  .gameover-banner .result-text{font-size:1.3rem;font-weight:700;margin-bottom:16px}
+
+  .debug-info{font-size:.65rem;color:var(--muted);text-align:center;opacity:.4;flex-shrink:0;padding:6px 0;word-break:break-all}
+  .hidden{display:none!important}
 </style>
 </head>
 <body>
+
+<!-- 星空背景 -->
+<div class="stars" id="stars"></div>
+
+<!-- 黑夜遮罩 -->
+<div class="night-veil" id="nightVeil"></div>
+
 <!-- 密码锁屏 -->
 <div class="lock-overlay" id="lockOverlay">
   <div class="lock-box">
     <h2>🐺 狼人杀</h2>
     <p id="lockPrompt">请输入访问密码</p>
     <input type="password" id="lockInput" placeholder="输入密码..." onkeydown="if(event.key==='Enter')checkPassword()">
-    <button class="btn btn-primary" onclick="checkPassword()" style="width:100%;">进入游戏</button>
+    <button class="btn btn-accent" onclick="checkPassword()" style="width:100%;">进入游戏</button>
     <div class="lock-msg" id="lockMsg"></div>
   </div>
 </div>
 
 <div class="container">
-  <div class="header">
-    <h1>🐺 狼人杀 <span class="badge">9人局</span></h1>
+
+  <!-- 顶部状态栏 -->
+  <div class="top-bar" id="topBar">
+    <div class="phase-indicator">
+      <span class="phase-icon" id="phaseIcon">⏳</span>
+      <span class="phase-text" id="phaseLabel">准备开始</span>
+    </div>
+    <span class="round-badge" id="roundLabel"></span>
+    <button class="btn-mute" id="btnMute" onclick="toggleMute()" title="静音AI语音">🔊</button>
   </div>
 
-  <!-- 状态栏 -->
-  <div class="status-bar" id="statusBar">
-    <span id="phaseLabel">⏳ 准备开始</span>
-    <span style="color:var(--muted);font-size:0.8rem;" id="roundLabel"></span>
-    <button class="btn-mute" id="btnMute" onclick="toggleMute()" title="切换AI语音">🔊</button>
-  </div>
-
-  <!-- API 配置 -->
-  <div class="api-config" id="apiConfig">
-    <label>🔑 DeepSeek Key:</label>
+  <!-- API Key -->
+  <div class="api-row" id="apiRow">
+    <label>🔑 Key:</label>
     <input type="password" id="apiKeyInput" placeholder="sk-..." onchange="saveApiKey()">
-    <span class="api-status no" id="apiStatus">未设置</span>
+    <span class="api-dot no" id="apiStatus">未设置</span>
   </div>
 
-  <!-- 玩家面板 -->
+  <!-- 玩家卡片 -->
   <div class="players-grid" id="playersGrid"></div>
 
-  <!-- 主舞台：上帝旁白 + 讨论 -->
-  <div class="stage" id="stage">
-    <div class="line system">等待游戏开始...</div>
+  <!-- 日志区 -->
+  <div class="log-area" id="logArea">
+    <div class="log-line system">等待游戏开始...</div>
   </div>
 
   <!-- 操作区 -->
-  <div class="actions" id="actions">
-    <div class="prompt" id="actionPrompt">🎮 准备好了吗？</div>
-    <div class="btn-row" id="actionButtons">
+  <div class="action-area" id="actionArea">
+    <div class="action-prompt" id="actionPrompt">🎮 准备好了吗？</div>
+    <div class="action-btns" id="actionButtons">
       <button class="btn btn-start" onclick="startGame()">🎮 开始游戏</button>
     </div>
-    <div class="speech-bar hidden" id="speechBar">
-      <input type="text" id="textInput" placeholder="输入文字..." onkeydown="if(event.key==='Enter')submitText()">
-      <button class="btn btn-mic" id="btnMic" onclick="toggleMic()" title="语音输入">🎤</button>
+    <div class="speech-row hidden" id="speechRow">
+      <input type="text" id="textInput" placeholder="输入你的发言..." onkeydown="if(event.key==='Enter')submitText()">
+      <button class="btn btn-mic-btn" id="btnMic" onclick="toggleMic()">🎤</button>
       <button class="btn btn-action" onclick="submitText()" style="display:none;" id="btnSend">发送</button>
     </div>
-    <div class="mic-status-line" id="micStatusLine"></div>
+    <div class="mic-status" id="micStatusLine"></div>
   </div>
 
   <div class="debug-info" id="debugInfo"></div>
@@ -387,16 +195,31 @@
 
 // ============ 常量定义 ============
 const R = {
-  SEER:   { id:'SEER',   name:'预言家', camp:'good', emoji:'🔮', nightOrder:2 },
-  WITCH:  { id:'WITCH',  name:'女巫',   camp:'good', emoji:'🧪', nightOrder:3 },
-  HUNTER: { id:'HUNTER', name:'猎人',   camp:'good', emoji:'🏹', nightOrder:0 },
-  WOLF:   { id:'WOLF',   name:'狼人',   camp:'wolf', emoji:'🐺', nightOrder:1 },
-  VILL:   { id:'VILL',   name:'平民',   camp:'good', emoji:'👤', nightOrder:0 },
+  SEER:   { id:'SEER',   name:'预言家', camp:'good', emoji:'🔮', nightOrder:2, icon:'🔮', desc:'每晚查验一名玩家' },
+  WITCH:  { id:'WITCH',  name:'女巫',   camp:'good', emoji:'🧪', nightOrder:3, icon:'🧪', desc:'解药和毒药各一瓶' },
+  HUNTER: { id:'HUNTER', name:'猎人',   camp:'good', emoji:'🏹', nightOrder:0, icon:'🏹', desc:'出局时可开枪带人' },
+  WOLF:   { id:'WOLF',   name:'狼人',   camp:'wolf', emoji:'🐺', nightOrder:1, icon:'🐺', desc:'每晚猎杀一名玩家' },
+  VILL:   { id:'VILL',   name:'平民',   camp:'good', emoji:'👤', nightOrder:0, icon:'👤', desc:'无特殊能力' },
 };
 
 const POOL = ['SEER','WITCH','HUNTER','WOLF','WOLF','WOLF','VILL','VILL','VILL'];
 const N = 9;
 const DEEPSEEK_API = 'https://api.deepseek.com/v1/chat/completions';
+
+// ============ 星空背景 ============
+(function createStars(){
+  const c = document.getElementById('stars');
+  for(let i=0;i<60;i++){
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.cssText = `
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;
+      --dur:${2+Math.random()*4}s;--delay:${Math.random()*5}s;
+    `;
+    c.appendChild(s);
+  }
+})();
 
 // ============ API Key 管理 ============
 function saveApiKey(){
@@ -414,33 +237,20 @@ function updateApiStatus(){
   const has = !!getApiKey();
   const el = $('apiStatus');
   el.textContent = has ? '已设置' : '未设置';
-  el.className = 'api-status ' + (has ? 'ok' : 'no');
+  el.className = 'api-dot ' + (has ? 'ok' : 'no');
 }
 
 // ============ 全局状态 ============
 let G = {
-  started: false,
-  round: 0,
-  phase: 'init',       // init|night|day|vote|gameover
-  players: [],         // {id:1..9, roleKey, alive:bool, isHuman:bool}
-  humanIdx: -1,
-  // 夜晚行动
+  started: false, round: 0, phase: 'init',
+  players: [], humanIdx: -1,
   nightTargets: { wolf:null, seer:null, guard:null },
-  witchAntidote: true,
-  witchPoison: true,
-  witchSaved: null,    // 被女巫救的人 (当晚不会死)
-  witchPoisoned: null, // 被女巫毒的人
-  lastGuardTarget: null,
-  nightKill: null,     // 狼人刀口
-  actualDeath: null,   // 实际死亡 (考虑女巫和守卫)
-  // 白天
-  discussionLog: [],
-  speechesThisRound: 0,
-  voteResults: {},
-  seerChecks: [],      // [{round, targetId, isWolf}]
-  roundSpeeches: [],   // [{playerId, text}]
-  // 缓存
-  resolve: null,       // Promise resolve for waiting human input
+  witchAntidote: true, witchPoison: true,
+  witchSaved: null, witchPoisoned: null, lastGuardTarget: null,
+  nightKill: null, actualDeath: null,
+  discussionLog: [], speechesThisRound: 0, voteResults: {},
+  seerChecks: [], roundSpeeches: [],
+  resolve: null, currentSpeaker: null,
 };
 
 // ============ 工具函数 ============
@@ -452,66 +262,119 @@ const aliveVills = () => G.players.filter(p=>p.alive && p.roleKey==='VILL');
 const hasWitchAnti = () => G.witchAntidote;
 const hasWitchPoi = () => G.witchPoison;
 const humanPlayer = () => G.players[G.humanIdx];
-const isHumanAlive = () => G.players[G.humanIdx].alive;
+const isHumanAlive = () => G.humanIdx >= 0 && G.players[G.humanIdx] && G.players[G.humanIdx].alive;
 
 // ============ UI 辅助 ============
 function $(id){ return document.getElementById(id); }
-function stage(msg, cls='system'){
-  const el = $('stage');
+
+function logLine(msg, cls='system'){
+  const el = $('logArea');
   const div = document.createElement('div');
-  div.className = 'line ' + cls;
+  div.className = 'log-line ' + cls;
   div.textContent = msg;
   el.appendChild(div);
-  // 确保新内容渲染后再滚动到底部
-  requestAnimationFrame(() => {
-    el.scrollTop = el.scrollHeight;
-  });
+  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
 }
-/** 去除文本中的 emoji 和装饰符号，让 TTS 只读文字 */
+
 function stripEmoji(text){
-  return text.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2500}-\u{25FF}]|[\u{FE00}-\u{FEFF}]|[\u{200D}]|[\u{20D0}-\u{20FF}]/gu, '')
-    .replace(/[★☆✿❀⚡✨🌟💫⭐🌙☀️☠️💀🔮🧪🏹🐺👤🗣🗳⏭🏁🎮🔄🎤⏹🔊🔇✅❌❓❗💬💚☠]/g, '')
-    .replace(/[🎭🎉💀☀️🌙⭐✨🏹🔮🧪🐺👤🗣🗳⏭🏁🎮🔄🎤⏹🔊🔇✅❌💬💚☠☀]/g, '')
-    .replace(/[⬛⬜🟥🟩🟨🟦]/g, '')
-    .trim();
+  return text.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{2300}-\u{23FF}]|[\u{2500}-\u{25FF}]|[\u{FE00}-\u{FEFF}]|[\u{200D}]|[\u{20D0}-\u{20FF}]/gu,'')
+    .replace(/[★☆✿❀⚡✨🌟💫⭐🌙☀️☠️💀🔮🧪🏹🐺👤🗣🗳⏭🏁🎮🔄🎤⏹🔊🔇✅❌❓❗💬💚☠🎭🎉☀☄⬛⬜🟥🟩🟨🟦]/g,'').trim();
 }
 
 async function godSay(msg){
-  stage('📯 '+msg, 'god');
+  logLine('📯 '+msg, 'god');
   await speakText(stripEmoji(msg));
 }
+
 function playerSay(num, msg){
-  stage('', 'player-speech');
-  const last=$('stage').lastChild;
-  last.innerHTML='<span class="speaker">'+num+'号：</span>'+msg;
-  requestAnimationFrame(() => {
-    $('stage').scrollTop = $('stage').scrollHeight;
+  logLine('', 'speech');
+  const last=$('logArea').lastChild;
+  last.innerHTML='<span class="spkr">'+num+'号：</span>'+msg;
+  requestAnimationFrame(() => { $('logArea').scrollTop = $('logArea').scrollHeight; });
+  highlightSpeaker(num);
+  setTimeout(()=>unhighlightAll(), 2500);
+}
+
+function systemSay(msg){ logLine(msg, 'system'); }
+function deathSay(msg){ logLine(msg, 'death'); }
+
+function highlightSpeaker(id){
+  unhighlightAll();
+  G.currentSpeaker = id;
+  const card = document.querySelector('.player-card[data-id="'+id+'"]');
+  if(card) card.classList.add('speaking');
+}
+function unhighlightAll(){
+  G.currentSpeaker = null;
+  document.querySelectorAll('.player-card.speaking').forEach(c=>c.classList.remove('speaking'));
+}
+
+function setCardsSelectable(ids, handler){
+  // 先清除所有选择状态
+  document.querySelectorAll('.player-card').forEach(c=>{
+    c.classList.remove('selectable');
+    c.onclick = null;
+  });
+  ids.forEach(id=>{
+    const card = document.querySelector('.player-card[data-id="'+id+'"]');
+    if(card){
+      card.classList.add('selectable');
+      card.onclick = () => handler(id);
+    }
   });
 }
-function systemSay(msg){ stage(msg, 'system'); }
+
+function clearCardsSelectable(){
+  document.querySelectorAll('.player-card.selectable').forEach(c=>{
+    c.classList.remove('selectable');
+    c.onclick = null;
+  });
+}
 
 function updatePlayerGrid(){
   const grid = $('playersGrid');
   grid.innerHTML = G.players.map(p=>{
-    const role = R[p.roleKey];
-    let cls = 'player-chip';
+    let cls = 'player-card';
     if(!p.alive) cls += ' dead';
     if(p.isHuman) cls += ' human';
-    const tags = p.isHuman ? '<span class="tag" style="background:rgba(245,197,24,0.2);color:#f5c518;">你</span>' : '';
-    return `<div class="${cls}">
-      <span class="num">${p.id}</span>
-      <span>${p.alive ? '存活' : '💀'}</span>
-      ${tags}
+    let badge = '';
+    if(!p.alive) badge = '<span class="card-badge">💀</span>';
+    else if(p.isHuman) badge = '<span class="card-badge you">你</span>';
+    const avatar = p.alive ? (p.isHuman ? '😎' : '🙂') : '💀';
+    return `<div class="${cls}" data-id="${p.id}">
+      ${badge}
+      <div class="card-num">${p.id}</div>
+      <div class="card-avatar">${avatar}</div>
+      <div class="card-label">${p.alive?'存活':'出局'}</div>
     </div>`;
   }).join('');
+  // 如果之前有高亮，恢复
+  if(G.currentSpeaker){
+    const card = document.querySelector('.player-card[data-id="'+G.currentSpeaker+'"]');
+    if(card) card.classList.add('speaking');
+  }
 }
 
 function updateStatus(phase, round){
-  const labels = { init:'⏳ 准备开始', night:'🌙 夜晚阶段', day:'☀️ 白天阶段', vote:'🗳 投票放逐', gameover:'🏁 游戏结束' };
-  $('phaseLabel').textContent = labels[phase] || phase;
+  const icons = { init:'⏳', night:'🌙', day:'☀️', vote:'🗳', gameover:'🏁' };
+  const labels = { init:'准备开始', night:'黑夜阶段', day:'白天阶段', vote:'投票放逐', gameover:'游戏结束' };
+  $('phaseIcon').textContent = icons[phase] || '⏳';
+  const label = $('phaseLabel');
+  label.textContent = labels[phase] || phase;
+  label.className = 'phase-text ' + (phase==='night'?'night':phase==='day'||phase==='vote'?'day':'');
   $('roundLabel').textContent = round > 0 ? `第 ${round} 轮` : '';
-  const tag = $('phaseLabel');
-  tag.className = 'phase-tag ' + (phase==='night'?'night':phase==='day'||phase==='vote'?'day':'');
+
+  // 黑夜/白天氛围切换
+  if(phase === 'night'){
+    document.body.classList.remove('day-mode');
+    $('nightVeil').classList.add('active');
+  } else if(phase === 'day' || phase === 'vote'){
+    document.body.classList.add('day-mode');
+    $('nightVeil').classList.remove('active');
+  } else {
+    document.body.classList.remove('day-mode');
+    $('nightVeil').classList.remove('active');
+  }
 }
 
 function setActions(prompt, buttons){
@@ -519,39 +382,31 @@ function setActions(prompt, buttons){
   $('actionButtons').innerHTML = buttons.map(b=>
     `<button class="btn ${b.cls||'btn-action'}" id="${b.id||''}" ${b.disabled?'disabled':''}>${b.label}</button>`
   ).join('');
-  $('speechBar').classList.add('hidden');
+  $('speechRow').classList.add('hidden');
   $('btnSend').style.display = 'none';
 }
 
 function showSpeechInput(){
-  $('speechBar').classList.remove('hidden');
+  $('speechRow').classList.remove('hidden');
   $('btnSend').style.display = 'inline-block';
   $('textInput').value = '';
   $('textInput').focus();
 }
 
 function hideSpeechInput(){
-  $('speechBar').classList.add('hidden');
+  $('speechRow').classList.add('hidden');
   $('btnSend').style.display = 'none';
 }
 
-function clearStage(){
-  $('stage').innerHTML = '';
-}
+function clearLog(){ $('logArea').innerHTML = ''; }
 
-// ============ 异步等待人类玩家操作 ============
+// ============ 异步等待人类操作 ============
 function waitForClick(btnIds){
   return new Promise(resolve => {
     G.resolve = resolve;
-    // 给按钮绑定一次性事件
     btnIds.forEach(id => {
       const btn = $(id);
-      if(btn){
-        btn.onclick = () => {
-          G.resolve = null;
-          resolve(id);
-        };
-      }
+      if(btn){ btn.onclick = () => { G.resolve = null; resolve(id); }; }
     });
   });
 }
@@ -565,1053 +420,528 @@ function waitForText(){
 
 function submitText(){
   const text = $('textInput').value.trim();
-  if(!text && G.resolve){
-    // 空文本不提交
-    return;
-  }
+  if(!text && G.resolve) return;
   hideSpeechInput();
-  if(G.resolve){
-    const r = G.resolve;
-    G.resolve = null;
-    r(text || '（沉默）');
-  }
+  if(G.resolve){ const r=G.resolve; G.resolve=null; r(text||'（沉默）'); }
 }
 
 // ============ 游戏引擎 ============
 async function startGame(){
-  // 停止上一局残留的语音
-  stopMic();
-  skipSpeech(); // 停止 AI 语音播报
-
-  // 初始化
+  stopMic(); skipSpeech();
   const roles = shuffle(POOL);
   const humanIdx = Math.floor(Math.random() * N);
   G = {
-    started: true,
-    round: 0,
-    phase: 'init',
-    players: roles.map((rk, i) => ({
-      id: i+1,
-      roleKey: rk,
-      alive: true,
-      isHuman: i === humanIdx,
-      personality: ['激进','保守','分析','跟风','谨慎'][Math.floor(Math.random()*5)], // 随机性格
+    started: true, round: 0, phase: 'init',
+    players: roles.map((rk, i)=>({
+      id: i+1, roleKey: rk, alive: true, isHuman: i===humanIdx,
+      personality: ['激进','保守','分析','跟风','谨慎'][Math.floor(Math.random()*5)],
     })),
-    humanIdx: humanIdx,
+    humanIdx,
     nightTargets: { wolf:null, seer:null, guard:null },
-    witchAntidote: true,
-    witchPoison: true,
-    witchSaved: null,
-    witchPoisoned: null,
-    lastGuardTarget: null,
-    nightKill: null,
-    actualDeath: null,
-    discussionLog: [],
-    speechesThisRound: 0,
-    voteResults: {},
-    seerChecks: [],
-    roundSpeeches: [],
-    resolve: null,
+    witchAntidote: true, witchPoison: true,
+    witchSaved: null, witchPoisoned: null, lastGuardTarget: null,
+    nightKill: null, actualDeath: null,
+    discussionLog: [], speechesThisRound: 0, voteResults: {},
+    seerChecks: [], roundSpeeches: [], resolve: null, currentSpeaker: null,
   };
-
-  clearStage();
-  updatePlayerGrid();
-  updateStatus('init', 0);
-  systemSay('🎭 角色已随机分配完毕');
-  systemSay('');
+  clearLog(); updatePlayerGrid(); updateStatus('init',0);
+  systemSay('🎭 角色已随机分配完毕'); systemSay('');
   await godSay(`请 ${humanPlayer().id} 号玩家查看自己的身份`);
-
   const human = humanPlayer();
   const role = R[human.roleKey];
   setActions(`🎭 你的身份：${role.emoji} ${role.name}（${human.id}号）`, [
     { id:'btnStartGame', label:'✅ 确认身份，开始游戏', cls:'btn-start' },
   ]);
-
-  // 显示狼同伴信息
   if(role.camp === 'wolf'){
-    const mates = G.players.filter(p=>p.roleKey==='WOLF' && !p.isHuman).map(p=>p.id+'号').join('、');
+    const mates = G.players.filter(p=>p.roleKey==='WOLF'&&!p.isHuman).map(p=>p.id+'号').join('、');
     $('actionPrompt').textContent += ` | 🐺 狼同伴：${mates}`;
   }
-
-  // 调试面板
   updateDebug();
-
-  // 等待确认
   waitForClick(['btnStartGame']).then(() => startRound());
 }
 
 function updateDebug(){
-  if(!G.started) { $('debugInfo').textContent = ''; return; }
-  const lines = G.players.map(p=>{
-    const m = p.isHuman?'👈':'';
-    const r = R[p.roleKey];
+  if(!G.started){ $('debugInfo').textContent=''; return; }
+  $('debugInfo').textContent='【调试】'+G.players.map(p=>{
+    const r=R[p.roleKey]; const m=p.isHuman?'👈':'';
     return `${p.id}号:${r.emoji}${r.name}${m} ${p.alive?'':'💀'}`;
-  });
-  $('debugInfo').textContent = '【调试】'+lines.join(' | ');
+  }).join(' | ');
 }
 
 // ============ 回合流程 ============
 async function startRound(){
-  G.round++;
-  G.nightTargets = { wolf:null, seer:null, guard:null };
-  G.witchSaved = null;
-  G.witchPoisoned = null;
-  G.nightKill = null;
-  G.actualDeath = null;
-  G.speechesThisRound = 0;
-  G.roundSpeeches = [];
-  G.voteResults = {};
+  G.round++; G.nightTargets={wolf:null,seer:null,guard:null};
+  G.witchSaved=null; G.witchPoisoned=null; G.nightKill=null;
+  G.actualDeath=null; G.speechesThisRound=0; G.roundSpeeches=[]; G.voteResults={};
 
-  updateStatus('night', G.round);
-  updatePlayerGrid();
-  updateDebug();
-
+  updateStatus('night', G.round); updatePlayerGrid(); updateDebug();
   await godSay('——————————————');
-  await godSay(`第 ${G.round} 轮 · 天黑请闭眼 🌙`);
+  await godSay(`第 ${G.round} 轮 · 天黑请闭眼`);
   await godSay('所有玩家请闭眼...');
   await sleep(1000);
 
   // === 狼人行动 ===
   await godSay('狼人请睁眼，选择今晚要猎杀的目标...');
   await sleep(600);
-
   let wolfTarget;
   const humanIsWolf = humanPlayer().roleKey === 'WOLF' && isHumanAlive();
-
   if(humanIsWolf){
-    // 人类是狼人，需要选择目标
     const targets = alivePlayers().filter(p=>R[p.roleKey].camp!=='wolf');
     setActions('🐺 选择今晚要杀的目标', targets.map(p=>({
-      id:'wolfTarget_'+p.id, label:p.id+'号', cls:'btn-action'
+      id:'wolfT_'+p.id, label:p.id+'号', cls:'btn-danger'
     })));
-    const chosen = await waitForClick(targets.map(p=>'wolfTarget_'+p.id));
-    wolfTarget = parseInt(chosen.replace('wolfTarget_',''));
+    setCardsSelectable(targets.map(p=>p.id), id=>{
+      const btn = $('wolfT_'+id);
+      if(btn) btn.click();
+    });
+    const chosen = await waitForClick(targets.map(p=>'wolfT_'+p.id));
+    clearCardsSelectable();
+    wolfTarget = parseInt(chosen.replace('wolfT_',''));
     systemSay(`🐺 狼人已选定猎杀 ${wolfTarget} 号`);
   } else {
-    // AI 狼人选目标
     wolfTarget = aiWolfTarget();
-    // 如果人类是狼人，告知同伴的决定
-    if(humanPlayer().roleKey === 'WOLF' && isHumanAlive()){
+    if(humanPlayer().roleKey==='WOLF' && isHumanAlive()){
       systemSay(`🐺 狼同伴决定猎杀 ${wolfTarget} 号`);
-    } else {
-      systemSay('🐺 狼人已选定目标...');
-    }
+    } else { systemSay('🐺 狼人已选定目标...'); }
   }
-  G.nightTargets.wolf = wolfTarget;
-  G.nightKill = wolfTarget;
+  G.nightTargets.wolf = wolfTarget; G.nightKill = wolfTarget;
   await sleep(400);
 
   // === 预言家行动 ===
   await godSay('预言家请睁眼，选择要查验的玩家...');
   await sleep(400);
-
   let seerTarget;
   const humanIsSeer = humanPlayer().roleKey === 'SEER' && isHumanAlive();
-
   if(humanIsSeer){
     const targets = alivePlayers().filter(p=>p.id!==humanPlayer().id);
     setActions('🔮 选择要查验的玩家', targets.map(p=>({
-      id:'seerTarget_'+p.id, label:p.id+'号', cls:'btn-action'
+      id:'seerT_'+p.id, label:p.id+'号', cls:'btn-action'
     })));
-    const chosen = await waitForClick(targets.map(p=>'seerTarget_'+p.id));
-    seerTarget = parseInt(chosen.replace('seerTarget_',''));
-    const targetRole = G.players[seerTarget-1];
-    const isWolf = R[targetRole.roleKey].camp === 'wolf';
+    setCardsSelectable(targets.map(p=>p.id), id=>{ const btn=$('seerT_'+id); if(btn) btn.click(); });
+    const chosen = await waitForClick(targets.map(p=>'seerT_'+p.id));
+    clearCardsSelectable();
+    seerTarget = parseInt(chosen.replace('seerT_',''));
+    const isWolf = R[G.players[seerTarget-1].roleKey].camp==='wolf';
     systemSay(`🔮 查验结果：${seerTarget}号是 ${isWolf?'🐺 狼人！':'✅ 好人'}`);
     G.seerChecks.push({round:G.round, targetId:seerTarget, isWolf});
   } else {
     seerTarget = aiSeerTarget();
-    // AI预言家的查验也记录下来
-    const targetRole2 = G.players[seerTarget-1];
-    G.seerChecks.push({round:G.round, targetId:seerTarget, isWolf: R[targetRole2.roleKey].camp==='wolf'});
+    const tw = G.players[seerTarget-1];
+    G.seerChecks.push({round:G.round, targetId:seerTarget, isWolf:R[tw.roleKey].camp==='wolf'});
   }
   G.nightTargets.seer = seerTarget;
   await sleep(400);
 
   // === 女巫行动 ===
   const witchAlive = G.players.find(p=>p.alive && p.roleKey==='WITCH');
-  if(witchAlive && (hasWitchAnti() || hasWitchPoi())){
-    await godSay('女巫请睁眼...');
-    await sleep(300);
-
+  if(witchAlive && (hasWitchAnti()||hasWitchPoi())){
+    await godSay('女巫请睁眼...'); await sleep(300);
     const humanIsWitch = witchAlive.isHuman;
-    if(humanIsWitch){
-      // 告知女巫今晚死亡信息
-      systemSay(`🧪 今晚 ${wolfTarget} 号被狼人杀害`);
-    }
-
-    // 解药
+    if(humanIsWitch){ systemSay(`🧪 今晚 ${wolfTarget} 号被狼人杀害`); }
     if(hasWitchAnti()){
       if(humanIsWitch){
         setActions(`🧪 今晚 ${wolfTarget} 号被杀，是否使用解药？`, [
-          {id:'witchSave_yes', label:`💚 救 ${wolfTarget} 号`, cls:'btn-action'},
+          {id:'witchSave_yes', label:`💚 救 ${wolfTarget} 号`, cls:'btn-accent'},
           {id:'witchSave_no', label:'不使用解药', cls:'btn-skip'},
         ]);
         const choice = await waitForClick(['witchSave_yes','witchSave_no']);
-        if(choice === 'witchSave_yes'){
-          G.witchSaved = wolfTarget;
-          G.witchAntidote = false;
-          systemSay('🧪 已使用解药');
-        }
+        if(choice==='witchSave_yes'){ G.witchSaved=wolfTarget; G.witchAntidote=false; systemSay('🧪 已使用解药'); }
       } else {
-        // AI 女巫决策
-        const aiSave = aiWitchAntidote(wolfTarget);
-        if(aiSave){
-          G.witchSaved = wolfTarget;
-          G.witchAntidote = false;
-          systemSay('🧪 女巫使用了【解药】');
-        }
+        if(aiWitchAntidote(wolfTarget)){ G.witchSaved=wolfTarget; G.witchAntidote=false; systemSay('🧪 女巫使用了【解药】'); }
       }
     }
-
-    // 毒药
     if(hasWitchPoi()){
       if(humanIsWitch){
-        const poisonTargets = alivePlayers().filter(p=>p.id!==witchAlive.id);
+        const pts = alivePlayers().filter(p=>p.id!==witchAlive.id);
         setActions('☠️ 是否使用毒药？', [
-          ...poisonTargets.map(p=>({id:'witchPoison_'+p.id, label:`☠️ 毒 ${p.id}号`, cls:'btn-action'})),
+          ...pts.map(p=>({id:'witchP_'+p.id, label:`☠️ 毒 ${p.id}号`, cls:'btn-danger'})),
           {id:'witchPoison_no', label:'不使用毒药', cls:'btn-skip'},
         ]);
-        const choice = await waitForClick([...poisonTargets.map(p=>'witchPoison_'+p.id), 'witchPoison_no']);
-        if(choice !== 'witchPoison_no'){
-          G.witchPoisoned = parseInt(choice.replace('witchPoison_',''));
-          G.witchPoison = false;
-          systemSay(`🧪 女巫毒杀了 ${G.witchPoisoned} 号`);
-        }
+        const choice = await waitForClick([...pts.map(p=>'witchP_'+p.id), 'witchPoison_no']);
+        if(choice!=='witchPoison_no'){ G.witchPoisoned=parseInt(choice.replace('witchP_','')); G.witchPoison=false; systemSay(`🧪 女巫毒杀了 ${G.witchPoisoned} 号`); }
       } else {
-        const aiPoi = aiWitchPoison();
-        if(aiPoi !== null){
-          G.witchPoisoned = aiPoi;
-          G.witchPoison = false;
-          systemSay('🧪 女巫使用了【毒药】');
-        }
+        const aiP=aiWitchPoison();
+        if(aiP!==null){ G.witchPoisoned=aiP; G.witchPoison=false; systemSay('🧪 女巫使用了【毒药】'); }
       }
     }
   }
   await sleep(400);
 
-  // === 守卫行动 ===
-  const guardAlive = G.players.find(p=>p.alive && p.roleKey==='HUNTER');
-  // 注：HUNTER 在这个版本里实际是猎人，守卫我还没加... 让我调整
-  // 实际上角色池里没有守卫，猎人代替守卫功能有些奇怪。先跳过守卫阶段，后续再加。
-
   // === 结算夜晚 ===
-  await godSay('天亮了... ☀️');
-  await sleep(800);
-
-  // 计算实际死亡
-  let deathId = G.nightKill;
-  if(G.witchSaved === deathId) deathId = null; // 被救
-  if(G.witchPoisoned !== null){
-    deathId = G.witchPoisoned; // 注意：可能同时有人被杀和被毒，暂时简单处理取毒药结果
-    // 更准确的处理：两个分开
-  }
-
-  // 简单处理：如果有女巫毒药，毒药致死；否则刀口致死（如果没被救）
-  const deaths = [];
-  if(G.nightKill && G.witchSaved !== G.nightKill){
-    deaths.push({id:G.nightKill, cause:'被狼人杀害'});
-  }
-  if(G.witchPoisoned !== null){
-    deaths.push({id:G.witchPoisoned, cause:'中毒身亡'});
-  }
-
-  G.actualDeath = deaths;
-
-  // 应用死亡
-  deaths.forEach(d => {
-    const p = G.players[d.id-1];
-    p.alive = false;
-  });
-
+  await godSay('天亮了...'); await sleep(800);
+  const deaths=[];
+  if(G.nightKill && G.witchSaved!==G.nightKill) deaths.push({id:G.nightKill, cause:'被狼人杀害'});
+  if(G.witchPoisoned!==null) deaths.push({id:G.witchPoisoned, cause:'中毒身亡'});
+  G.actualDeath=deaths;
+  deaths.forEach(d=>{ G.players[d.id-1].alive=false; });
   updatePlayerGrid();
 
-  // 宣布死亡
-  if(deaths.length === 0){
-    await godSay('昨晚是平安夜，无人死亡 ✨');
-  } else {
-    deaths.forEach(d => {
-      const p = G.players[d.id-1];
-      const role = R[p.roleKey];
-      stage(`💀 ${d.id}号玩家 ${d.cause}`, 'death');
-    });
-  }
+  if(deaths.length===0){ await godSay('昨晚是平安夜，无人死亡 ✨'); }
+  else { deaths.forEach(d=>{ deathSay(`💀 ${d.id}号玩家 ${d.cause}`); }); }
 
   await sleep(800);
 
   // === 猎人开枪 ===
   for(const d of deaths){
-    const deadPlayer = G.players[d.id-1];
-    if(deadPlayer.roleKey === 'HUNTER'){
-      await godSay(`🏹 ${d.id}号是猎人！可以开枪带走一名玩家...`);
-      await sleep(400);
-      if(deadPlayer.isHuman && isHumanAlive()){
-        // 人类猎人选择
-        const targets = alivePlayers().filter(p=>p.id!==deadPlayer.id);
+    const dp = G.players[d.id-1];
+    if(dp.roleKey==='HUNTER'){
+      await godSay(`🏹 ${d.id}号是猎人！可以开枪带走一名玩家...`); await sleep(400);
+      if(dp.isHuman && isHumanAlive()){
+        const targets = alivePlayers().filter(p=>p.id!==dp.id);
         setActions('🏹 选择要带走的玩家', targets.map(p=>({
-          id:'hunterShot_'+p.id, label:p.id+'号', cls:'btn-action'
+          id:'huntS_'+p.id, label:p.id+'号', cls:'btn-danger'
         })));
-        const chosen = await waitForClick(targets.map(p=>'hunterShot_'+p.id));
-        const shot = parseInt(chosen.replace('hunterShot_',''));
-        G.players[shot-1].alive = false;
-        stage(`🏹 猎人开枪带走了 ${shot} 号玩家！`, 'death');
+        const chosen = await waitForClick(targets.map(p=>'huntS_'+p.id));
+        const shot = parseInt(chosen.replace('huntS_',''));
+        G.players[shot-1].alive=false; deathSay(`🏹 猎人开枪带走了 ${shot} 号玩家！`);
       } else {
-        // AI 猎人选择
-        const shot = aiHunterShot(deadPlayer.id);
-        if(shot !== null){
-          G.players[shot-1].alive = false;
-          stage(`🏹 猎人开枪带走了 ${shot} 号玩家！`, 'death');
-        }
+        const shot=aiHunterShot(dp.id);
+        if(shot!==null){ G.players[shot-1].alive=false; deathSay(`🏹 猎人开枪带走了 ${shot} 号玩家！`); }
       }
     }
   }
-
-  updatePlayerGrid();
-  updateDebug();
-  await sleep(600);
-
-  // === 检查胜负 ===
+  updatePlayerGrid(); updateDebug(); await sleep(600);
   if(await checkWin()) return;
-
-  // === 进入白天发言 ===
   await dayDiscussion();
   if(await checkWin()) return;
-
-  // === 投票 ===
   await votingPhase();
   if(await checkWin()) return;
-
-  // === 下一轮 ===
-  await godSay('——————————————');
-  await sleep(500);
+  await godSay('——————————————'); await sleep(500);
   startRound();
 }
 
 // ============ 白天讨论 ============
 async function dayDiscussion(){
-  G.phase = 'day';
-  updateStatus('day', G.round);
-
+  G.phase='day'; updateStatus('day', G.round);
   await godSay('进入自由发言阶段，按编号顺序发言 🗣');
-
-  const speakers = alivePlayers().sort((a,b) => a.id - b.id);
-
-  for(let i = 0; i < speakers.length; i++){
-    const p = speakers[i];
+  const speakers = alivePlayers().sort((a,b)=>a.id-b.id);
+  for(const p of speakers){
     if(!p.alive) continue;
-
     if(p.isHuman && isHumanAlive()){
-      // 人类玩家发言
-      setActions(`🗣 轮到你了（${p.id}号），请发言`, [
-        {id:'btnSpeak', label:'🎤 语音发言', cls:'btn-mic'},
-      ]);
+      highlightSpeaker(p.id);
+      setActions(`🗣 轮到你了（${p.id}号），请发言`, []);
       showSpeechInput();
       $('actionPrompt').textContent = `🗣 轮到你发言了（${p.id}号）`;
       $('textInput').placeholder = '输入你的发言...';
-
       const speech = await waitForText();
       const finalText = speech || '（沉默）';
       playerSay(p.id, finalText);
-      G.roundSpeeches.push({playerId: p.id, text: finalText});
-
-      hideSpeechInput();
-      setActions('等待其他人发言...', []);
+      G.roundSpeeches.push({playerId:p.id, text:finalText});
+      hideSpeechInput(); setActions('等待其他人发言...', []);
     } else {
-      // AI 发言 — DeepSeek API 生成 + 语音播报
       const aiSpeech = await aiGenerateSpeech(p);
       playerSay(p.id, aiSpeech);
-      G.roundSpeeches.push({playerId: p.id, text: aiSpeech});
-
-      // 显示跳过按钮 + 播报语音
+      G.roundSpeeches.push({playerId:p.id, text:aiSpeech});
       setActions(`💬 ${p.id}号正在发言...（AI语音播报中）`, [
-        {id:'btnSkipSpeech', label:'⏭ 跳过语音', cls:'btn-skip-speech'},
+        {id:'btnSkipSpeech', label:'⏭ 跳过语音', cls:'btn-skip'},
       ]);
-      $('speechBar').classList.add('hidden');
-
-      // 同时开始播报 + 等待跳过
+      $('speechRow').classList.add('hidden');
       const voiceOpts = VOICE_PROFILES[p.personality] || {};
       const spoke = speakText(aiSpeech, voiceOpts);
       const skipped = waitForClick(['btnSkipSpeech']);
       await Promise.race([spoke, skipped]);
-      skipSpeech(); // 确保语音停止
-
+      skipSpeech();
       setActions('等待其他人发言...', []);
-      await sleep(200 + Math.random() * 300);
+      await sleep(200+Math.random()*300);
     }
   }
-
-  systemSay('发言结束');
-  await sleep(500);
+  unhighlightAll();
+  systemSay('发言结束'); await sleep(500);
 }
 
 // ============ 投票 ============
 async function votingPhase(){
-  G.phase = 'vote';
-  updateStatus('vote', G.round);
+  G.phase='vote'; updateStatus('vote', G.round);
   await godSay('现在开始投票放逐，请选择你要放逐的玩家 🗳');
-
-  // 收集所有投票
-  const voters = alivePlayers();
-  const candidates = alivePlayers();
-  const votes = {}; // {voterId: targetId}
-  candidates.forEach(c => { G.voteResults[c.id] = 0; });
-
+  const voters = alivePlayers(); const candidates = alivePlayers();
+  candidates.forEach(c=>{ G.voteResults[c.id]=0; });
   for(const voter of voters){
     if(voter.isHuman && isHumanAlive()){
       setActions(`🗳 请投票选择要放逐的玩家`, candidates.map(c=>({
-        id:'vote_'+c.id, label:c.id+'号', cls:'btn-action'
+        id:'vote_'+c.id, label:c.id+'号', cls:'btn-danger'
       })));
+      setCardsSelectable(candidates.map(c=>c.id), id=>{ const btn=$('vote_'+id); if(btn)btn.click(); });
       const chosen = await waitForClick(candidates.map(c=>'vote_'+c.id));
+      clearCardsSelectable();
       const target = parseInt(chosen.replace('vote_',''));
-      votes[voter.id] = target;
-      G.voteResults[target]++;
-      systemSay(`你投票给了 ${target} 号`);
+      G.voteResults[target]++; systemSay(`你投票给了 ${target} 号`);
     } else {
-      // AI 投票
       const target = aiVote(voter);
-      votes[voter.id] = target;
       if(target) G.voteResults[target]++;
     }
   }
-
-  // 公布投票结果
   await godSay('投票结果：');
-  Object.entries(G.voteResults).forEach(([id, count]) => {
-    if(count > 0) systemSay(`  ${id}号：${count} 票`);
+  Object.entries(G.voteResults).forEach(([id,count])=>{
+    if(count>0) systemSay(`  ${id}号：${count} 票`);
   });
-
-  // 找出最高票
-  let maxVotes = 0;
-  let eliminated = [];
-  Object.entries(G.voteResults).forEach(([id, count]) => {
-    if(count > maxVotes){ maxVotes = count; eliminated = [parseInt(id)]; }
-    else if(count === maxVotes && count > 0){ eliminated.push(parseInt(id)); }
+  let maxV=0, eliminated=[];
+  Object.entries(G.voteResults).forEach(([id,count])=>{
+    if(count>maxV){ maxV=count; eliminated=[parseInt(id)]; }
+    else if(count===maxV && count>0){ eliminated.push(parseInt(id)); }
   });
-
-  if(eliminated.length === 0){
-    systemSay('无人被放逐');
-  } else if(eliminated.length > 1){
-    systemSay(`平票！${eliminated.join('号、')}号均被放逐（平票规则：全部出局）`);
-    eliminated.forEach(id => {
-      G.players[id-1].alive = false;
-      const role = R[G.players[id-1].roleKey];
-      stage(`🗳 ${id}号被投票放逐（平票）`, 'death');
-    });
+  if(eliminated.length===0){ systemSay('无人被放逐'); }
+  else if(eliminated.length>1){
+    systemSay(`平票！${eliminated.join('号、')}号均被放逐`);
+    eliminated.forEach(id=>{ G.players[id-1].alive=false; deathSay(`🗳 ${id}号被投票放逐（平票）`); });
   } else {
-    const id = eliminated[0];
-    G.players[id-1].alive = false;
-    const role = R[G.players[id-1].roleKey];
-    stage(`🗳 ${id}号被投票放逐`, 'death');
+    const id=eliminated[0]; G.players[id-1].alive=false;
+    deathSay(`🗳 ${id}号被投票放逐`);
     await godSay(`${id}号玩家被放逐出局，请留遗言`);
-
-    // 猎人被投票出局
-    if(G.players[id-1].roleKey === 'HUNTER'){
-      await sleep(400);
-      await godSay(`🏹 ${id}号是猎人！可以开枪...`);
+    if(G.players[id-1].roleKey==='HUNTER'){
+      await sleep(400); await godSay(`🏹 ${id}号是猎人！可以开枪...`);
       if(G.players[id-1].isHuman){
-        const targets = alivePlayers().filter(p=>p.id!==id);
+        const targets=alivePlayers().filter(p=>p.id!==id);
         setActions('🏹 选择要带走的玩家', targets.map(p=>({
-          id:'hunterShot_'+p.id, label:p.id+'号', cls:'btn-action'
+          id:'huntS_'+p.id, label:p.id+'号', cls:'btn-danger'
         })));
-        const chosen = await waitForClick(targets.map(p=>'hunterShot_'+p.id));
-        const shot = parseInt(chosen.replace('hunterShot_',''));
-        G.players[shot-1].alive = false;
-        stage(`🏹 猎人带走了 ${shot} 号`, 'death');
-      } else {
-        const shot = aiHunterShot(id);
-        if(shot !== null){
-          G.players[shot-1].alive = false;
-          stage(`🏹 猎人带走了 ${shot} 号`, 'death');
-        }
-      }
+        const chosen=await waitForClick(targets.map(p=>'huntS_'+p.id));
+        const shot=parseInt(chosen.replace('huntS_',''));
+        G.players[shot-1].alive=false; deathSay(`🏹 猎人带走了 ${shot} 号`);
+      } else { const shot=aiHunterShot(id); if(shot!==null){ G.players[shot-1].alive=false; deathSay(`🏹 猎人带走了 ${shot} 号`); } }
     }
   }
-
-  updatePlayerGrid();
-  updateDebug();
-  await sleep(800);
+  updatePlayerGrid(); updateDebug(); await sleep(800);
 }
 
 // ============ 胜负判定 ============
 async function checkWin(){
-  const wolves = aliveWolves();
-  const gods = aliveGods();
-  const vills = aliveVills();
-
-  // 狼人胜利条件：神职全灭 或 平民全灭
-  if(gods.length === 0 || vills.length === 0){
-    await gameOver('wolf');
-    return true;
-  }
-
-  // 好人胜利条件：狼人全灭
-  if(wolves.length === 0){
-    await gameOver('good');
-    return true;
-  }
-
+  const wolves=aliveWolves(), gods=aliveGods(), vills=aliveVills();
+  if(gods.length===0||vills.length===0){ await gameOver('wolf'); return true; }
+  if(wolves.length===0){ await gameOver('good'); return true; }
   return false;
 }
 
 async function gameOver(winner){
-  G.phase = 'gameover';
-  updateStatus('gameover', G.round);
-
+  G.phase='gameover'; updateStatus('gameover', G.round);
   await godSay('══════════════');
-  if(winner === 'wolf'){
+  if(winner==='wolf'){
     await godSay('🐺 狼人阵营获胜！');
-    const humanIsWolf = humanPlayer().roleKey === 'WOLF';
-    systemSay(humanIsWolf ? '🎉 恭喜你赢了！狼人屠城成功！' : '💀 狼人屠城了...你输了');
+    systemSay(humanPlayer().roleKey==='WOLF'?'🎉 恭喜你赢了！狼人屠城成功！':'💀 狼人屠城了...你输了');
   } else {
     await godSay('🎉 好人阵营获胜！');
-    const humanIsGood = R[humanPlayer().roleKey].camp === 'good';
-    systemSay(humanIsGood ? '🎉 恭喜你赢了！所有狼人被消灭！' : '💀 你的狼人同伴全被消灭了...');
+    systemSay(R[humanPlayer().roleKey].camp==='good'?'🎉 恭喜你赢了！所有狼人被消灭！':'💀 你的狼人同伴全被消灭了...');
   }
-
-  // 揭示所有身份
-  systemSay('');
-  systemSay('—— 身份揭晓 ——');
-  G.players.forEach(p => {
-    const role = R[p.roleKey];
+  systemSay(''); systemSay('—— 身份揭晓 ——');
+  G.players.forEach(p=>{
+    const role=R[p.roleKey];
     systemSay(`${p.id}号：${role.emoji} ${role.name} ${!p.alive?'💀':''} ${p.isHuman?'👈':''}`);
   });
-
-  updatePlayerGrid();
-  updateDebug();
-
-  setActions('游戏结束！', [
-    {id:'btnRestart', label:'🔄 再来一局', cls:'btn-start'},
-  ]);
-  waitForClick(['btnRestart']).then(() => startGame());
+  updatePlayerGrid(); updateDebug();
+  setActions('游戏结束！', [{id:'btnRestart', label:'🔄 再来一局', cls:'btn-start'}]);
+  waitForClick(['btnRestart']).then(()=>startGame());
 }
 
 // ============ AI 引擎 ============
-/** 狼人选目标：优先神职 */
 function aiWolfTarget(){
-  const targets = alivePlayers().filter(p => R[p.roleKey].camp !== 'wolf');
-  // 优先预言家、女巫
-  const priority = targets.filter(p => p.roleKey === 'SEER' || p.roleKey === 'WITCH');
-  if(priority.length > 0 && Math.random() < 0.75){
-    return priority[Math.floor(Math.random() * priority.length)].id;
-  }
-  return targets[Math.floor(Math.random() * targets.length)].id;
+  const targets = alivePlayers().filter(p=>R[p.roleKey].camp!=='wolf');
+  const priority = targets.filter(p=>p.roleKey==='SEER'||p.roleKey==='WITCH');
+  if(priority.length>0 && Math.random()<0.75) return priority[Math.floor(Math.random()*priority.length)].id;
+  return targets[Math.floor(Math.random()*targets.length)].id;
 }
-
-/** 预言家查验：优先查验可疑的、发言少的 */
 function aiSeerTarget(){
-  const targets = alivePlayers().filter(p => !G.nightTargets.seer || p.id !== G.nightTargets.seer);
-  // 避免重复查自己已知的
-  const unchecked = targets.filter(p => {
-    // 简单策略：随机选一个不是狼同伴的
-    return p.roleKey !== 'SEER';
-  });
-  if(unchecked.length === 0) return targets[0]?.id;
-  return unchecked[Math.floor(Math.random() * unchecked.length)].id;
+  const targets = alivePlayers().filter(p=>!G.nightTargets.seer||p.id!==G.nightTargets.seer);
+  const unchecked = targets.filter(p=>p.roleKey!=='SEER');
+  if(unchecked.length===0) return targets[0]?.id;
+  return unchecked[Math.floor(Math.random()*unchecked.length)].id;
 }
-
-/** 女巫解药：第一晚大概率救 */
 function aiWitchAntidote(wolfTarget){
-  if(G.round === 1) return Math.random() < 0.8;
-  // 后面几轮, 如果是重要角色才救
-  const target = G.players[wolfTarget-1];
-  if(target && (target.roleKey==='SEER'||target.roleKey==='HUNTER')){
-    return Math.random() < 0.6;
-  }
-  return Math.random() < 0.3;
+  if(G.round===1) return Math.random()<0.8;
+  const t=G.players[wolfTarget-1];
+  if(t&&(t.roleKey==='SEER'||t.roleKey==='HUNTER')) return Math.random()<0.6;
+  return Math.random()<0.3;
 }
-
-/** 女巫毒药：确定狼人了才用 */
 function aiWitchPoison(){
-  if(G.round < 2) return null; // 前两轮不用
-  if(Math.random() < 0.4) return null; // 60%概率考虑用毒
-  // 随机选一个好人以外的（模拟AI判断）
-  const suspects = alivePlayers().filter(p => R[p.roleKey].camp === 'wolf');
-  if(suspects.length === 0) return null;
-  return suspects[Math.floor(Math.random() * suspects.length)].id;
+  if(G.round<2) return null;
+  if(Math.random()<0.4) return null;
+  const suspects=alivePlayers().filter(p=>R[p.roleKey].camp==='wolf');
+  if(suspects.length===0) return null;
+  return suspects[Math.floor(Math.random()*suspects.length)].id;
 }
-
-/** 猎人开枪：优先打狼，或者随机 */
 function aiHunterShot(hunterId){
-  const targets = alivePlayers().filter(p => p.id !== hunterId);
-  if(targets.length === 0) return null;
-  // 有一定概率正确判断
-  const wolves = targets.filter(p => R[p.roleKey].camp === 'wolf');
-  if(wolves.length > 0 && Math.random() < 0.5){
-    return wolves[Math.floor(Math.random() * wolves.length)].id;
-  }
-  return targets[Math.floor(Math.random() * targets.length)].id;
+  const targets=alivePlayers().filter(p=>p.id!==hunterId);
+  if(targets.length===0) return null;
+  const wolves=targets.filter(p=>R[p.roleKey].camp==='wolf');
+  if(wolves.length>0 && Math.random()<0.5) return wolves[Math.floor(Math.random()*wolves.length)].id;
+  return targets[Math.floor(Math.random()*targets.length)].id;
 }
 
-// ============ AI 发言生成 ============
 // ============ DeepSeek API 发言生成 ============
-
-/**
- * 为指定 AI 玩家构建 Prompt
- * 包含：秘密身份、游戏状态、已有发言、角色策略
- */
 function buildPromptForPlayer(player){
-  const role = R[player.roleKey];
-  const isWolf = role.camp === 'wolf';
-  const aliveIds = alivePlayers().map(p=>p.id);
-  const deadIds = G.players.filter(p=>!p.alive).map(p=>p.id);
-
-  // 昨晚发生了什么
-  let nightInfo = '';
-  if(G.actualDeath && G.actualDeath.length > 0){
-    nightInfo = G.actualDeath.map(d => `${d.id}号玩家${d.cause}`).join('，');
-  } else if(G.round > 0){
-    nightInfo = '昨晚是平安夜，无人死亡';
-  }
-
-  // 狼同伴（仅狼人可见）
-  let wolfInfo = '';
+  const role=R[player.roleKey]; const isWolf=role.camp==='wolf';
+  const aliveIds=alivePlayers().map(p=>p.id);
+  const deadIds=G.players.filter(p=>!p.alive).map(p=>p.id);
+  let nightInfo='';
+  if(G.actualDeath&&G.actualDeath.length>0) nightInfo=G.actualDeath.map(d=>`${d.id}号${d.cause}`).join('，');
+  else if(G.round>0) nightInfo='昨晚是平安夜，无人死亡';
+  let wolfInfo='';
   if(isWolf){
-    const mates = G.players.filter(p=>p.roleKey==='WOLF' && p.id!==player.id && p.alive).map(p=>p.id+'号');
-    const deadWolves = G.players.filter(p=>p.roleKey==='WOLF' && !p.alive).map(p=>p.id+'号');
-    wolfInfo = `你的狼同伴是：${mates.join('、')}。`;
-    if(deadWolves.length > 0) wolfInfo += `（${deadWolves.join('、')}已出局）`;
+    const mates=G.players.filter(p=>p.roleKey==='WOLF'&&p.id!==player.id&&p.alive).map(p=>p.id+'号');
+    const deadW=G.players.filter(p=>p.roleKey==='WOLF'&&!p.alive).map(p=>p.id+'号');
+    wolfInfo=`你的狼同伴：${mates.join('、')}。`;
+    if(deadW.length>0) wolfInfo+=`（${deadW.join('、')}已出局）`;
   }
-
-  // 预言家查验记录（仅预言家可见）
-  let seerInfo = '';
-  if(player.roleKey === 'SEER' && G.seerChecks.length > 0){
-    const checks = G.seerChecks.filter(c=>{
-      // AI预言家只有自己的记录，人类预言家也只有自己的
-      if(player.isHuman) return true;
-      // AI seer: all AI seer checks
-      return true;
-    });
-    seerInfo = '你的查验记录：\n';
-    G.seerChecks.forEach(c => {
-      const target = G.players[c.targetId-1];
-      seerInfo += `- 第${c.round}轮查验${c.targetId}号：${c.isWolf?'狼人':'好人'}\n`;
-    });
+  let seerInfo='';
+  if(player.roleKey==='SEER'&&G.seerChecks.length>0){
+    seerInfo='你的查验记录：\n';
+    G.seerChecks.forEach(c=>{ seerInfo+=`- 第${c.round}轮查${c.targetId}号：${c.isWolf?'狼人':'好人'}\n`; });
   }
+  let strategy='';
+  if(isWolf){ strategy=`你是狼人，伪装成好人。像普通村民一样推理、甩锅，绝不暴露同伴。`; }
+  else if(player.roleKey==='SEER'){ strategy=`你是预言家，以平民身份发言。用"我觉得""我感觉"暗示查验结果，绝不说"我查验过"。`; }
+  else if(player.roleKey==='WITCH'){ strategy=`你是女巫，以平民身份发言。完全像平民一样推理，不暴露身份。`; }
+  else if(player.roleKey==='HUNTER'){ strategy=`你是猎人，以平民身份发言。被攻击时适度回击但不暴露。`; }
+  else { strategy=`你是平民，仔细听发言找矛盾，表达怀疑对象和理由。`; }
+  let prevSpeeches='';
+  if(G.roundSpeeches.length>0){
+    prevSpeeches='【本轮已有发言】\n';
+    G.roundSpeeches.forEach(s=>{ prevSpeeches+=`${s.playerId}号："${s.text}"\n`; });
+  } else { prevSpeeches='（本轮第一个发言）'; }
 
-  // 角色发言策略
-  let strategy = '';
-  if(isWolf){
-    strategy = `你是狼人，必须伪装成好人。发言策略：
-- 像普通村民一样推理，分析谁可能是狼人
-- 可以把嫌疑引到好人身上，但不能太刻意
-- 绝对不能暴露自己或同伴的身份
-- 如果有人怀疑你或你的同伴，要巧妙反驳
-- 可以假装跟风别人的怀疑`;
-  } else if(player.roleKey === 'SEER'){
-    strategy = `你是预言家，但绝对不能暴露身份。发言策略：
-- 以平民身份发言，但可以"直觉很准"地引导大家
-- 如果查验到狼人，可以"感觉"那个人很可疑，带头怀疑他
-- 如果查验到好人，可以说"我觉得他是好人"
-- 不要说"我查验过"，只能说"我觉得""我感觉"
-- 发言要自然，像一个普通村民在推理`;
-  } else if(player.roleKey === 'WITCH'){
-    strategy = `你是女巫，以平民身份发言。发言策略：
-- 完全像平民一样推理和发言
-- 如果你用了解药救了某人，可能在发言中稍微维护他
-- 如果你用了毒药毒了某人（且是狼人），可以暗自高兴
-- 除非迫不得已，不要暴露女巫身份`;
-  } else if(player.roleKey === 'HUNTER'){
-    strategy = `你是猎人，以平民身份发言。发言策略：
-- 像普通平民一样发言
-- 如果有人强烈攻击你，可以适度回击但不暴露身份
-- 只有在你快被投出去时才暗示自己有能力`;
-  } else {
-    strategy = `你是普通平民，没有任何特殊能力。发言策略：
-- 仔细听别人的发言，找出矛盾或可疑之处
-- 表达自己的怀疑对象和理由
-- 可以跟风，也可以提出不同意见
-- 努力帮好人阵营找出狼人`;
-  }
+  return `你是${player.id}号玩家。9人狼人杀（3狼1预言1女巫1猎人3平民）。
 
-  // 已有发言记录
-  let prevSpeeches = '';
-  if(G.roundSpeeches.length > 0){
-    prevSpeeches = '【本轮已发言的玩家】\n';
-    G.roundSpeeches.forEach(s => {
-      prevSpeeches += `${s.playerId}号说："${s.text}"\n`;
-    });
-  } else {
-    prevSpeeches = '（本轮还没有人发言，你是第一个）';
-  }
-
-  const prompt = `你正在玩一局9人狼人杀游戏，你是${player.id}号玩家。
-
-【游戏规则】
-9名玩家：3狼人、1预言家、1女巫、1猎人、3平民
-狼人每晚杀一人，预言家每晚查一人
-狼人赢：杀光所有神职 或 杀光所有平民
-好人赢：投票放逐所有狼人
-
-【你的真实身份】${role.emoji} ${role.name}
-${wolfInfo}
-${seerInfo}
-
-【游戏局势】
-当前第${G.round}轮，白天发言阶段
-存活玩家：${aliveIds.join('号、')}号
-已出局玩家：${deadIds.length>0 ? deadIds.join('号、')+'号' : '无'}
-${nightInfo}
+【真实身份】${role.emoji} ${role.name}
+${wolfInfo}${seerInfo}
+【局势】第${G.round}轮白天 | 存活：${aliveIds.join('、')}号 | 出局：${deadIds.length>0?deadIds.join('、')+'号':'无'} | ${nightInfo}
 
 ${prevSpeeches}
-
-【你的发言策略】
-${strategy}
-
-【发言要求】
-- 3到5句话，像真人玩家一样自然
-- 要有明确的怀疑对象，给出简要理由
-- 语气自然，像是在跟其他玩家对话
-- 只输出发言内容本身，不要加"XX号说："前缀
-- 不要加任何解释、说明或括号注释`;
-
-  return prompt;
+【策略】${strategy}
+【要求】3-5句话，自然流畅，有明确怀疑对象。只输出发言内容，不加前缀。`;
 }
 
-/** 调用 DeepSeek API 生成发言 */
 async function callDeepSeek(prompt){
-  const apiKey = getApiKey();
-  if(!apiKey) return null;
-
-  try {
-    const resp = await fetch(DEEPSEEK_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          { role: 'system', content: '你是一个狼人杀玩家，你的发言要像真人一样自然。只输出发言内容。' },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.9,
-        max_tokens: 300,
-      }),
+  const apiKey=getApiKey(); if(!apiKey) return null;
+  try{
+    const resp=await fetch(DEEPSEEK_API,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+      body:JSON.stringify({model:'deepseek-chat',messages:[
+        {role:'system',content:'你是一个狼人杀玩家，发言像真人一样自然。只输出发言内容。'},
+        {role:'user',content:prompt}
+      ],temperature:0.9,max_tokens:300}),
     });
-
-    if(!resp.ok){
-      const err = await resp.json().catch(()=>({}));
-      console.error('DeepSeek API 错误:', resp.status, err);
-      return null;
-    }
-
-    const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content;
-    if(content){
-      // 清理：去掉可能的引号、"XX号说："前缀等
-      return content.trim()
-        .replace(/^["'""]/,'').replace(/["'""]$/,'')
-        .replace(/^（.+?）\s*/,'')
-        .replace(/^\d+号[说：:]\s*/,'');
-    }
+    if(!resp.ok){ console.error('API错误:',resp.status); return null; }
+    const data=await resp.json();
+    const content=data.choices?.[0]?.message?.content;
+    if(content) return content.trim().replace(/^["'""]/,'').replace(/["'""]$/,'').replace(/^（.+?）\s*/,'').replace(/^\d+号[说：:]\s*/,'');
     return null;
-  } catch(e){
-    console.error('DeepSeek 调用失败:', e);
-    return null;
-  }
+  }catch(e){ console.error('API失败:',e); return null; }
 }
 
-/** AI 发言：优先用 DeepSeek API，失败时回退到简单模板 */
 async function aiGenerateSpeech(player){
-  const apiKey = getApiKey();
-
-  // 有 API Key 则调用 DeepSeek
+  const apiKey=getApiKey();
   if(apiKey){
-    setActions(`🤖 ${player.id}号正在思考...（AI生成中）`, []);
-    const prompt = buildPromptForPlayer(player);
-    const result = await callDeepSeek(prompt);
+    setActions(`🤖 ${player.id}号正在思考...`,[]);
+    const prompt=buildPromptForPlayer(player);
+    const result=await callDeepSeek(prompt);
     if(result) return result;
-    // API 失败，回退
-    systemSay('⚠️ API调用失败，使用备用发言');
+    systemSay('⚠️ API失败，使用备用发言');
   }
-
-  // 备用：简单模板发言
-  const suspects = alivePlayers().filter(p => p.id !== player.id);
-  if(suspects.length === 0) return '我觉得没什么好说的，大家看着投吧。';
-  const target = suspects[Math.floor(Math.random() * suspects.length)];
-  return `我觉得${target.id}号有点可疑，发言不太自然。大家怎么看？我暂时倾向于怀疑他，但还需要更多信息来确认。`;
+  const suspects=alivePlayers().filter(p=>p.id!==player.id);
+  if(suspects.length===0) return '我觉得没什么好说的，大家看着投吧。';
+  const t=suspects[Math.floor(Math.random()*suspects.length)];
+  return `我觉得${t.id}号有点可疑，发言不太自然。大家怎么看？我暂时倾向于怀疑他，但还需要更多信息来确认。`;
 }
 
-/** AI 投票：根据发言和角色决定 */
 function aiVote(voter){
-  const candidates = alivePlayers().filter(p => p.id !== voter.id);
-  if(candidates.length === 0) return null;
-
-  const isWolf = R[voter.roleKey].camp === 'wolf';
-  let target;
-
+  const candidates=alivePlayers().filter(p=>p.id!==voter.id);
+  if(candidates.length===0) return null;
+  const isWolf=R[voter.roleKey].camp==='wolf';
   if(isWolf){
-    // 狼人投好人，且尽量分散或跟风
-    const good = candidates.filter(p => R[p.roleKey].camp === 'good');
-    target = good.length > 0 ? good[Math.floor(Math.random()*good.length)] : candidates[0];
-  } else {
-    // 好人有一定概率投狼
-    const wolves = candidates.filter(p => R[p.roleKey].camp === 'wolf');
-    if(wolves.length > 0 && Math.random() < 0.45){
-      target = wolves[Math.floor(Math.random()*wolves.length)];
-    } else {
-      target = candidates[Math.floor(Math.random()*candidates.length)];
-    }
+    const good=candidates.filter(p=>R[p.roleKey].camp==='good');
+    return good.length>0?good[Math.floor(Math.random()*good.length)].id:candidates[0].id;
+  }else{
+    const wolves=candidates.filter(p=>R[p.roleKey].camp==='wolf');
+    if(wolves.length>0&&Math.random()<0.45) return wolves[Math.floor(Math.random()*wolves.length)].id;
+    return candidates[Math.floor(Math.random()*candidates.length)].id;
   }
-
-  return target.id;
 }
 
-// ============ 语音输入（复用 Web Speech API）============
-let recognition = null;
-let isListening = false;
+// ============ 语音 ============
+let recognition=null, isListening=false;
+let muteAI=false, chineseVoice=null, currentSpeech=null;
 
-// ============ 语音合成（AI 发言播报）============
-let muteAI = false;
-let chineseVoice = null;
-let currentSpeech = null;  // 当前正在播放的 utterance，用于跳过
-
-/** 初始化中文语音 */
 function initVoice(){
-  const voices = speechSynthesis.getVoices();
-  // 优先找 zh-CN 的语音，其次 zh 系列
-  chineseVoice = voices.find(v => v.lang === 'zh-CN')
-    || voices.find(v => v.lang.startsWith('zh'))
-    || voices.find(v => v.lang === 'zh-TW')
-    || voices.find(v => v.lang === 'zh-HK');
-  // Windows 通常有 Microsoft Huihui (zh-CN)，macOS 有 Ting-Ting
-  if(!chineseVoice){
-    console.warn('未找到中文语音，将使用默认语音');
-  }
+  const voices=speechSynthesis.getVoices();
+  chineseVoice=voices.find(v=>v.lang==='zh-CN')||voices.find(v=>v.lang.startsWith('zh'))||voices.find(v=>v.lang==='zh-TW')||voices.find(v=>v.lang==='zh-HK');
 }
+if(typeof speechSynthesis!=='undefined'){ speechSynthesis.onvoiceschanged=initVoice; initVoice(); }
 
-// 页面加载时尝试初始化语音，voices 可能异步加载
-if(typeof speechSynthesis !== 'undefined'){
-  speechSynthesis.onvoiceschanged = initVoice;
-  initVoice(); // 部分浏览器同步可用
-}
-
-/** TTS 播报文本，返回 Promise，播完或跳过时 resolve */
-/** 不同性格的AI语音配置 */
-const VOICE_PROFILES = {
-  '激进':   { rate: 1.15, pitch: 1.2,  volume: 1.0 },  // 快、音调高、激动
-  '分析':   { rate: 0.95, pitch: 1.0,  volume: 1.0 },  // 中等、沉稳
-  '保守':   { rate: 0.85, pitch: 0.9,  volume: 0.85 }, // 慢、低声、谨慎
-  '跟风':   { rate: 1.0,  pitch: 1.05, volume: 0.9 },  // 普通
-  '谨慎':   { rate: 0.9,  pitch: 0.95, volume: 0.9 },  // 稍慢、低沉
+const VOICE_PROFILES={
+  '激进':{rate:1.15,pitch:1.2,volume:1.0},
+  '分析':{rate:0.95,pitch:1.0,volume:1.0},
+  '保守':{rate:0.85,pitch:0.9,volume:0.85},
+  '跟风':{rate:1.0,pitch:1.05,volume:0.9},
+  '谨慎':{rate:0.9,pitch:0.95,volume:0.9},
 };
 
-function speakText(text, options = {}){
-  return new Promise(resolve => {
-    if(muteAI || !text || typeof speechSynthesis === 'undefined'){
-      resolve(); return;
-    }
-
-    // 清理之前的语音
+function speakText(text, options={}){
+  return new Promise(resolve=>{
+    if(muteAI||!text||typeof speechSynthesis==='undefined'){ resolve(); return; }
     speechSynthesis.cancel();
-
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'zh-CN';
-    utter.rate = options.rate || 1.05;
-    utter.pitch = options.pitch || 1.0;
-    utter.volume = options.volume || 1.0;
-
-    if(chineseVoice){
-      utter.voice = chineseVoice;
-    }
-
-    currentSpeech = utter;
-
-    utter.onend = () => {
-      currentSpeech = null;
-      resolve();
-    };
-    utter.onerror = (e) => {
-      currentSpeech = null;
-      console.warn('语音合成错误:', e.error);
-      resolve(); // 出错也继续游戏
-    };
-
+    const utter=new SpeechSynthesisUtterance(text);
+    utter.lang='zh-CN'; utter.rate=options.rate||1.05; utter.pitch=options.pitch||1.0; utter.volume=options.volume||1.0;
+    if(chineseVoice) utter.voice=chineseVoice;
+    currentSpeech=utter;
+    utter.onend=()=>{ currentSpeech=null; resolve(); };
+    utter.onerror=()=>{ currentSpeech=null; resolve(); };
     speechSynthesis.speak(utter);
   });
 }
-
 function toggleMute(){
-  muteAI = !muteAI;
-  const btn = $('btnMute');
-  if(muteAI){
-    btn.textContent = '🔇';
-    btn.classList.add('muted');
-    // 停止当前语音
-    if(typeof speechSynthesis !== 'undefined'){
-      speechSynthesis.cancel();
-    }
-  } else {
-    btn.textContent = '🔊';
-    btn.classList.remove('muted');
-  }
+  muteAI=!muteAI; const btn=$('btnMute');
+  if(muteAI){ btn.textContent='🔇'; btn.classList.add('muted'); if(typeof speechSynthesis!=='undefined') speechSynthesis.cancel(); }
+  else { btn.textContent='🔊'; btn.classList.remove('muted'); }
 }
-
-/** 跳过当前语音（如果有的话） */
-function skipSpeech(){
-  if(currentSpeech && typeof speechSynthesis !== 'undefined'){
-    speechSynthesis.cancel();
-    currentSpeech = null;
-  }
-}
+function skipSpeech(){ if(currentSpeech){ speechSynthesis.cancel(); currentSpeech=null; } }
 
 function toggleMic(){
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SpeechRecognition){
-    alert('请使用 Chrome 或 Edge 浏览器进行语音识别');
-    return;
-  }
-
-  if(isListening){
-    stopMic();
-    return;
-  }
-
-  recognition = new SpeechRecognition();
-  recognition.lang = 'zh-CN';
-  recognition.interimResults = true;
-  recognition.continuous = true;
-
-  recognition.onstart = () => {
-    isListening = true;
-    $('btnMic').textContent = '⏹';
-    $('btnMic').classList.add('listening');
-    $('micStatusLine').textContent = '🎤 正在聆听...';
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ alert('请使用Chrome或Edge浏览器'); return; }
+  if(isListening){ stopMic(); return; }
+  recognition=new SR();
+  recognition.lang='zh-CN'; recognition.interimResults=true; recognition.continuous=true;
+  recognition.onstart=()=>{ isListening=true; $('btnMic').textContent='⏹'; $('btnMic').classList.add('listening'); $('micStatusLine').textContent='🎤 聆听中...'; };
+  recognition.onaudiostart=()=>{ $('micStatusLine').textContent='🔊 检测到声音...'; };
+  recognition.onspeechstart=()=>{ $('micStatusLine').textContent='🗣 识别中...'; };
+  recognition.onresult=(event)=>{
+    let f='',it='';
+    for(let i=event.resultIndex;i<event.results.length;i++){ const r=event.results[i]; if(r.isFinal) f+=r[0].transcript; else it+=r[0].transcript; }
+    if(f){ $('textInput').value=f; $('micStatusLine').textContent='✅ '+f; setTimeout(()=>{ if(isListening) stopMic(); submitText(); },600); }
+    else if(it){ $('textInput').value=it; $('micStatusLine').textContent='🔄 '+it; }
   };
-
-  recognition.onaudiostart = () => {
-    $('micStatusLine').textContent = '🔊 检测到声音...';
-  };
-
-  recognition.onspeechstart = () => {
-    $('micStatusLine').textContent = '🗣 识别中...';
-  };
-
-  recognition.onresult = (event) => {
-    let finalText = '';
-    let interim = '';
-    for(let i=event.resultIndex; i<event.results.length; i++){
-      const r = event.results[i];
-      if(r.isFinal) finalText += r[0].transcript;
-      else interim += r[0].transcript;
-    }
-    if(finalText){
-      $('textInput').value = finalText;
-      $('micStatusLine').textContent = '✅ 识别完成：' + finalText;
-      // 自动提交
-      setTimeout(() => {
-        if(isListening) stopMic();
-        submitText();
-      }, 600);
-    } else if(interim){
-      $('textInput').value = interim;
-      $('micStatusLine').textContent = '🔄 ' + interim;
-    }
-  };
-
-  recognition.onerror = (event) => {
-    $('micStatusLine').textContent = '❌ ' + event.error;
-    if(event.error === 'not-allowed'){
-      alert('请在浏览器设置中允许麦克风访问');
-    }
-    if(event.error !== 'aborted'){
-      stopMic();
-    }
-  };
-
-  recognition.onend = () => {
-    if(isListening){
-      try { recognition.start(); } catch(e){
-        stopMic();
-      }
-    }
-  };
-
-  try { recognition.start(); } catch(e){
-    $('micStatusLine').textContent = '启动失败: '+e.message;
-  }
+  recognition.onerror=(e)=>{ $('micStatusLine').textContent='❌ '+e.error; if(e.error==='not-allowed') alert('请允许麦克风访问'); if(e.error!=='aborted') stopMic(); };
+  recognition.onend=()=>{ if(isListening){ try{recognition.start();}catch(e){stopMic();} } };
+  try{recognition.start();}catch(e){$('micStatusLine').textContent='启动失败: '+e.message;}
 }
-
 function stopMic(){
-  isListening = false;
-  if(recognition){
-    try { recognition.stop(); } catch(e){}
-    recognition = null;
-  }
-  $('btnMic').textContent = '🎤';
-  $('btnMic').classList.remove('listening');
-  $('micStatusLine').textContent = '';
+  isListening=false; if(recognition){ try{recognition.stop();}catch(e){} recognition=null; }
+  $('btnMic').textContent='🎤'; $('btnMic').classList.remove('listening'); $('micStatusLine').textContent='';
 }
-
-function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 // ============ 密码保护 ============
-const PASSWORD_KEY = 'werewolf_access_pw';
-const OWNER_KEY = 'werewolf_owner_set';
-
-function getSavedPassword(){
-  return localStorage.getItem(PASSWORD_KEY) || '';
-}
-
+const PASSWORD_KEY='werewolf_access_pw';
 function checkPassword(){
-  const input = $('lockInput').value.trim();
-  const saved = getSavedPassword();
-
-  // 首次访问：设置密码
+  const input=$('lockInput').value.trim();
+  const saved=localStorage.getItem(PASSWORD_KEY)||'';
   if(!saved){
-    if(input.length < 3){
-      $('lockMsg').textContent = '密码至少3位，请设置你的访问密码';
-      return;
-    }
-    localStorage.setItem(PASSWORD_KEY, input);
-    localStorage.setItem(OWNER_KEY, '1');
-    $('lockOverlay').style.display = 'none';
-    return;
+    if(input.length<3){ $('lockMsg').textContent='密码至少3位'; return; }
+    localStorage.setItem(PASSWORD_KEY,input); $('lockOverlay').style.display='none'; return;
   }
-
-  // 已有密码：验证
-  if(input === saved){
-    $('lockOverlay').style.display = 'none';
-  } else {
-    $('lockMsg').textContent = '❌ 密码错误';
-    $('lockInput').value = '';
-  }
+  if(input===saved){ $('lockOverlay').style.display='none'; }
+  else { $('lockMsg').textContent='❌ 密码错误'; $('lockInput').value=''; }
 }
-
 function showLockScreen(){
-  const saved = getSavedPassword();
-  $('lockInput').value = '';
-  $('lockMsg').textContent = '';
-  if(!saved){
-    $('lockPrompt').textContent = '首次访问，请设置一个访问密码（自己记住）';
-  } else {
-    $('lockPrompt').textContent = '请输入访问密码';
-  }
-  $('lockOverlay').style.display = 'flex';
-  // 如果之前解锁过（输对密码），不再锁
+  const saved=localStorage.getItem(PASSWORD_KEY)||'';
+  $('lockInput').value=''; $('lockMsg').textContent='';
+  $('lockPrompt').textContent=saved?'请输入访问密码':'首次访问，请设置访问密码';
+  $('lockOverlay').style.display='flex';
 }
 
-// 页面初始化
-function initPage(){
-  const saved = getSavedPassword();
-  if(saved){
-    // 已有密码，显示锁屏
-    showLockScreen();
-  } else {
-    // 首次，也显示锁屏让主人设密码
-    showLockScreen();
-  }
-}
-
-// ============ 初始页面 ============
-initPage();
+// ============ 初始化 ============
+showLockScreen();
 loadApiKey();
 updatePlayerGrid();
-for(let i=1;i<=N;i++){
-  const chip = document.querySelector('.player-chip:nth-child('+i+')');
-  if(chip) chip.style.opacity = '0.5';
-}
 </script>
 </body>
 </html>
