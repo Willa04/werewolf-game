@@ -18,17 +18,17 @@
   *{margin:0;padding:0;box-sizing:border-box}
   body{
     font-family:'Microsoft YaHei','PingFang SC','Noto Sans SC',sans-serif;
-    background:var(--bg-night);color:var(--text);
+    background:#030614;color:var(--text);
     min-height:100vh;overflow-x:hidden;
-    transition:background 1.2s ease;
+    transition:background 1.5s ease;
   }
-  body.day-mode{background:var(--bg-day)}
+  body.day-mode{background:#142038}
 
-  /* 星空背景 */
-  .stars{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.7;transition:opacity 1.2s}
-  body.day-mode .stars{opacity:.15}
+  /* 星空 */
+  .stars{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.85;transition:opacity 1.5s}
+  body.day-mode .stars{opacity:0}
   .star{position:absolute;background:#fff;border-radius:50%;animation:twinkle var(--dur) ease-in-out infinite;animation-delay:var(--delay)}
-  @keyframes twinkle{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.8)}}
+  @keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:1;transform:scale(2)}}
 
   .container{position:relative;z-index:1;width:100%;max-width:520px;margin:0 auto;padding:4px 10px 6px;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 
@@ -104,8 +104,10 @@
   .btn-mute{background:none;border:1px solid var(--card-border);color:var(--text);font-size:1rem;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
   .btn-mute:hover{background:rgba(255,255,255,.08)}.btn-mute.muted{color:var(--muted);border-color:#444}
 
-  .night-veil{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,20,0);pointer-events:none;z-index:5;transition:background 1.5s ease}
-  .night-veil.active{background:rgba(0,0,20,.35)}
+  .night-veil{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;transition:all 1.5s ease;background:transparent}
+  .night-veil.active{background:radial-gradient(ellipse at 50% 80%,rgba(15,25,60,.5) 0%,rgba(3,5,20,.7) 100%)}
+  .day-glow{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:4;transition:opacity 1.5s;opacity:0;background:radial-gradient(ellipse at 50% 20%,rgba(255,180,60,.1) 0%,rgba(255,120,30,.04) 50%,transparent 70%)}
+  body.day-mode .day-glow{opacity:1}
 
   .lock-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:#050816;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
   .lock-box{background:var(--card-bg);border-radius:16px;padding:32px 28px;border:1px solid var(--card-border);text-align:center;max-width:340px;width:90%}
@@ -126,6 +128,7 @@
 <!-- 星空背景 -->
 <div class="stars" id="stars"></div>
 
+<div class="day-glow" id="dayGlow"></div>
 <!-- 黑夜遮罩 -->
 <div class="night-veil" id="nightVeil"></div>
 
