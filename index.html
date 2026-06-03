@@ -403,6 +403,7 @@ function clearLog(){ $('logArea').innerHTML = ''; }
 // ============ 异步等待人类操作 ============
 function waitForClick(btnIds){
   return new Promise(resolve => {
+    if(G.aborted){ resolve('aborted'); return; }
     G.resolve = resolve;
     btnIds.forEach(id => {
       const btn = $(id);
@@ -413,6 +414,7 @@ function waitForClick(btnIds){
 
 function waitForText(){
   return new Promise(resolve => {
+    if(G.aborted){ resolve('aborted'); return; }
     G.resolve = resolve;
     showSpeechInput();
   });
@@ -650,12 +652,14 @@ async function dayDiscussion(){
       $('actionPrompt').textContent = `🗣 轮到你发言了（${p.id}号）`;
       $('textInput').placeholder = '输入你的发言...';
       const speech = await waitForText();
+      if(G.aborted) return;
       const finalText = speech || '（沉默）';
       playerSay(p.id, finalText);
       G.roundSpeeches.push({playerId:p.id, text:finalText});
       hideSpeechInput(); setActions('等待其他人发言...', []);
     } else {
       const aiSpeech = await aiGenerateSpeech(p);
+      if(G.aborted) return;
       playerSay(p.id, aiSpeech);
       G.roundSpeeches.push({playerId:p.id, text:aiSpeech});
       setActions(`💬 ${p.id}号正在发言...（AI语音播报中）`, [
@@ -666,6 +670,7 @@ async function dayDiscussion(){
       const spoke = speakText(aiSpeech, voiceOpts);
       const skipped = waitForClick(['btnSkipSpeech']);
       await Promise.race([spoke, skipped]);
+      if(G.aborted){ skipSpeech(); return; }
       skipSpeech();
       setActions('等待其他人发言...', []);
       await sleep(200+Math.random()*300);
@@ -861,6 +866,7 @@ async function aiGenerateSpeech(player){
     setActions(`🤖 ${player.id}号正在思考...`,[]);
     const prompt=buildPromptForPlayer(player);
     const result=await callDeepSeek(prompt);
+    if(G.aborted) return '...';
     if(result) return result;
     systemSay('⚠️ API失败，使用备用发言');
   }
@@ -904,6 +910,7 @@ const VOICE_PROFILES={
 
 function speakText(text, options={}){
   return new Promise(resolve=>{
+    if(G.aborted){ resolve(); return; }
     if(muteAI||!text||typeof speechSynthesis==='undefined'){ resolve(); return; }
     speechSynthesis.cancel();
     const utter=new SpeechSynthesisUtterance(text);
