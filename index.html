@@ -101,8 +101,11 @@
   .api-row input:focus{border-color:var(--accent)}
   .api-dot{font-size:.7rem;white-space:nowrap}.api-dot.ok{color:var(--good)}.api-dot.no{color:var(--muted)}
 
-  .btn-mute{background:none;border:1px solid var(--card-border);color:var(--text);font-size:1rem;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
-  .btn-mute:hover{background:rgba(255,255,255,.08)}.btn-mute.muted{color:var(--muted);border-color:#444}
+  .btn-mute,.btn-end{background:none;border:1px solid var(--card-border);color:var(--text);font-size:.95rem;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+  .btn-mute:hover,.btn-end:hover{background:rgba(255,255,255,.08)}
+  .btn-mute.muted{color:var(--muted);border-color:#444}
+  .btn-end{color:var(--accent);border-color:rgba(233,69,96,.3)}
+  .btn-end:hover{background:rgba(233,69,96,.15)}
 
   .night-veil{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;transition:all 1.5s ease;background:transparent}
   .night-veil.active{background:radial-gradient(ellipse at 50% 80%,rgba(15,25,60,.5) 0%,rgba(3,5,20,.7) 100%)}
@@ -152,6 +155,7 @@
       <span class="phase-text" id="phaseLabel">准备开始</span>
     </div>
     <span class="round-badge" id="roundLabel"></span>
+    <button class="btn-end" id="btnEnd" onclick="endGame()" title="结束游戏" style="display:none;">⏹</button>
     <button class="btn-mute" id="btnMute" onclick="toggleMute()" title="静音AI语音">🔊</button>
   </div>
 
@@ -445,6 +449,7 @@ async function startGame(){
   };
   clearLog(); updatePlayerGrid(); updateStatus('init',0);
   $('apiRow').classList.add('hidden'); // 游戏开始后隐藏API栏
+  $('btnEnd').style.display = 'flex'; // 显示结束按钮
   systemSay('🎭 角色已随机分配完毕'); systemSay('');
   await godSay(`请 ${humanPlayer().id} 号玩家查看自己的身份`);
   const human = humanPlayer();
@@ -458,6 +463,24 @@ async function startGame(){
   }
   updateDebug();
   waitForClick(['btnStartGame']).then(() => startRound());
+}
+
+function endGame(){
+  stopMic(); skipSpeech();
+  clearCardsSelectable(); unhighlightAll();
+  G.started = false; G.phase = 'init';
+  $('btnEnd').style.display = 'none';
+  $('apiRow').classList.remove('hidden');
+  clearLog();
+  updatePlayerGrid();
+  updateStatus('init', 0);
+  systemSay('游戏已结束，点击下方按钮重新开始');
+  setActions('🎮 准备好了吗？', [
+    {id:'btnStart', label:'🎮 开始游戏', cls:'btn-start'},
+  ]);
+  if($('btnStart')){
+    $('btnStart').onclick = () => startGame();
+  }
 }
 
 function updateDebug(){
@@ -727,6 +750,7 @@ async function gameOver(winner){
     systemSay(`${p.id}号：${role.emoji} ${role.name} ${!p.alive?'💀':''} ${p.isHuman?'👈':''}`);
   });
   updatePlayerGrid(); updateDebug();
+  $('btnEnd').style.display = 'none';
   setActions('游戏结束！', [{id:'btnRestart', label:'🔄 再来一局', cls:'btn-start'}]);
   waitForClick(['btnRestart']).then(()=>startGame());
 }
